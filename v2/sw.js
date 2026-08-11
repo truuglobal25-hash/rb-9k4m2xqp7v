@@ -1,7 +1,7 @@
 // Keeps a copy on the phone so the book opens with no signal, but always tries
 // for a fresh one first. Cache-first looked fine and meant a new build could
 // never reach the phone - it would sit on the first copy forever.
-const C='routebook-fc2645da327c';
+const C='routebook-ce681d7639d5';
 self.addEventListener('install',e=>{e.waitUntil(
   caches.open(C).then(c=>c.addAll(['./','./index.html','./manifest.json'])).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(
