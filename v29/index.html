@@ -1,0 +1,64 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<title>North Route Book</title>
+<style>
+:root{color-scheme:dark}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+ background:#0E1420;color:#EAEFF5;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.box{width:min(92vw,340px);text-align:center;padding:28px 22px;background:#18202D;
+ border-radius:16px;box-shadow:0 20px 60px -20px rgba(0,0,0,.7)}
+h1{font-size:19px;margin:0 0 4px;letter-spacing:-.02em}
+p{margin:0 0 18px;font-size:13px;color:#8896A8}
+input{width:100%;box-sizing:border-box;padding:13px 14px;font-size:17px;border-radius:10px;
+ border:1px solid #28323F;background:#0E1420;color:#EAEFF5;-webkit-appearance:none}
+button{width:100%;margin-top:11px;padding:13px;font-size:16px;font-weight:700;border:0;
+ border-radius:10px;background:#FFB020;color:#191100}
+.err{margin-top:12px;font-size:13px;color:#FF6B6E;min-height:18px}
+</style></head><body>
+<div class="box">
+  <h1>North Route Book</h1>
+  <p>Enter your password to open it</p>
+  <input id="p" type="password" autocomplete="current-password" enterkeyhint="go">
+  <button id="go">Open</button>
+  <div class="err" id="e"></div>
+</div>
+<script>
+const BIN='book-9074e239cad4.bin';
+// Start pulling the book straight away, so by the time the password is typed it
+// is usually already on the phone and opening feels instant.
+let blobP=fetch(BIN).then(r=>r.arrayBuffer());
+async function open_(pw){
+  const buf=new Uint8Array(await blobP);
+  const salt=buf.slice(0,16), nonce=buf.slice(16,28), body=buf.slice(28);
+  const kd=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+  const k=await crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt:salt,iterations:250000,hash:'SHA-256'},
+    kd,{name:'AES-GCM',length:256},false,['decrypt']);
+  const packed=await crypto.subtle.decrypt({name:'AES-GCM',iv:nonce},k,body);
+  if(typeof DecompressionStream==='undefined')
+    throw new Error('This phone is too old to open the book. Update iOS or Android.');
+  const html=await new Response(
+    new Blob([packed]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+  try{ localStorage.setItem('rb_pw', pw); }catch(_){}   // so it opens straight up next time
+  document.open(); document.write(html); document.close();
+}
+async function tryOpen(pw){
+  const e=document.getElementById('e');
+  e.textContent='Opening...';
+  try{ await open_(pw); }
+  catch(err){ e.textContent=/too old/.test(err.message)?err.message:'Wrong password';
+              blobP=fetch(BIN).then(r=>r.arrayBuffer()); }
+}
+document.getElementById('go').onclick=()=>tryOpen(document.getElementById('p').value);
+document.getElementById('p').addEventListener('keydown',ev=>{if(ev.key==='Enter')tryOpen(ev.target.value)});
+// remembered on this phone, so it does not ask every morning
+(async()=>{ let s=null; try{ s=localStorage.getItem('rb_pw'); }catch(_){}
+  if(s){ try{ await open_(s); }catch(_){ try{localStorage.removeItem('rb_pw');}catch(_){}
+         document.getElementById('p').focus(); } }
+  else { document.getElementById('p').focus(); } })();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
