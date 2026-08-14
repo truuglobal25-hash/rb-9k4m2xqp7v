@@ -1,0 +1,25 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Test</title>
+<body style="margin:0;background:#0E1420;color:#FFB020;font:700 30px/1.4 -apple-system,sans-serif;
+ display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;text-align:center;padding:20px">
+IT WORKS
+<div style="font-size:15px;color:#EAEFF5;font-weight:400;margin-top:14px">
+Plain page. No password, no storage, no code that can fail.</div>
+<div id="c" style="font-size:13px;color:#8896A8;font-weight:400;margin-top:22px">cleaning up old copies...</div>
+<script>
+// Any old service worker left over from earlier versions takes over every page
+// under this address and can keep serving a broken copy. Clear the lot.
+(async()=>{
+  let n=0;
+  try{ const rs=await navigator.serviceWorker.getRegistrations();
+       for(const r of rs){ await r.unregister(); n++; } }catch(e){}
+  try{ const ks=await caches.keys(); for(const k of ks){ await caches.delete(k); n++; } }catch(e){}
+  try{ localStorage.clear(); }catch(e){}
+  try{ indexedDB.deleteDatabase('routebook'); }catch(e){}
+  document.getElementById('c').textContent =
+    'Cleared '+n+' old copies. Your phone: '+
+    (window.crypto&&crypto.subtle?'crypto ok':'NO CRYPTO')+' · '+
+    (typeof DecompressionStream!=='undefined'?'unzip ok':'NO UNZIP')+' · '+
+    (typeof indexedDB!=='undefined'?'storage ok':'NO STORAGE');
+})();
+</script></body>
