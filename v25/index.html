@@ -18,8 +18,14 @@ input{width:100%;box-sizing:border-box;padding:13px 14px;font-size:17px;border-r
 button{width:100%;margin-top:11px;padding:13px;font-size:16px;font-weight:700;border:0;
  border-radius:10px;background:#FFB020;color:#191100}
 .err{margin-top:12px;font-size:13px;color:#FF6B6E;min-height:18px}
+
+#fx{position:fixed;inset:0;z-index:0}
+.box{position:relative;z-index:1;transform-style:preserve-3d;will-change:transform;
+ transition:transform .18s ease-out}
+@media (prefers-reduced-motion:reduce){#fx{display:none}.box{transition:none}}
 </style></head><body>
-<div class="box">
+<canvas id="fx"></canvas>
+<div class="box" id="box">
   <h1>North Route Book</h1>
   <p>Enter your password to open it</p>
   <input id="p" type="password" autocomplete="current-password" enterkeyhint="go">
@@ -61,4 +67,34 @@ document.getElementById('p').addEventListener('keydown',ev=>{if(ev.key==='Enter'
          document.getElementById('p').focus(); } }
   else { document.getElementById('p').focus(); } })();
 
+
+// welcome depth field - pure canvas, ~2KB, dies the moment the book opens.
+(()=>{try{
+if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+const c=document.getElementById('fx'),x=c.getContext('2d');
+let W,H,P=[];const N=90;
+function fit(){W=c.width=innerWidth*devicePixelRatio;H=c.height=innerHeight*devicePixelRatio}
+fit();addEventListener('resize',fit);
+for(let i=0;i<N;i++)P.push({x:Math.random(),y:Math.random(),z:Math.random()*0.9+0.1});
+let tx=0,ty=0;
+addEventListener('pointermove',e=>{tx=(e.clientX/innerWidth-.5);ty=(e.clientY/innerHeight-.5)});
+addEventListener('deviceorientation',e=>{if(e.gamma!=null){tx=e.gamma/60;ty=e.beta/120}});
+const box=document.getElementById('box');
+let stop=false;
+function frame(){
+  if(stop||!document.getElementById('fx'))return;
+  x.clearRect(0,0,W,H);
+  for(const p of P){
+    p.y-=0.0006*p.z; if(p.y<0){p.y=1;p.x=Math.random()}
+    const px=(p.x+tx*0.06*p.z)*W, py=(p.y+ty*0.06*p.z)*H, r=p.z*2.2*devicePixelRatio;
+    x.beginPath();x.arc(px,py,r,0,7);
+    x.fillStyle=p.z>0.75?'rgba(255,176,32,'+(0.25+p.z*0.45)+')':'rgba(147,161,180,'+(0.08+p.z*0.22)+')';
+    x.fill();
+  }
+  if(box) box.style.transform='perspective(900px) rotateY('+(tx*7)+'deg) rotateX('+(-ty*7)+'deg)';
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+const _show=window.show; if(typeof _show==='function'){window.show=function(h){stop=true;return _show(h)}}
+}catch(_){}})();
 </script></body></html>
