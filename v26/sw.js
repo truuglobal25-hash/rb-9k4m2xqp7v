@@ -4,7 +4,7 @@
 // background refresh, last-known-good promoted only on healthy boot, and an
 // inline offline screen instead of a browser error page.
 const CUR='v26-cur-3', GOOD='v26-good-3', KEY='./';
-const PRECACHE=['./','./manifest.json','./icon-192.png','./icon-512.png'];
+const PRECACHE=['./','./manifest.json','./icon-192.png','./icon-512.png','./safe.html'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
  const c=await caches.open(CUR);
  for(const p of PRECACHE){try{
@@ -28,6 +28,24 @@ const OFFLINE_HTML=`<!doctype html><meta charset=utf-8><meta name=viewport conte
 self.addEventListener('fetch',e=>{
  const u=new URL(e.request.url);
  if(e.request.method!=='GET'||u.origin!==location.origin)return;
+ const page=u.pathname.split('/').pop();
+ // network-test.html is a pure connectivity probe: never touched by the worker.
+ if(page==='network-test.html')return;
+ // safe.html is the rescue page: network first, cached copy only when offline.
+ if(page==='safe.html'){e.respondWith((async()=>{
+  try{
+   const r=await fetch(e.request);
+   if(r&&r.ok){const c=await caches.open(CUR);await c.put('./safe.html',r.clone())}
+   return r;
+  }catch(err){
+   const c=await caches.open(CUR);
+   const hit=await c.match('./safe.html');
+   if(hit)return hit;
+   const g=await caches.open(GOOD);
+   const gh=await g.match('./safe.html');
+   if(gh)return gh;
+   return new Response(OFFLINE_HTML,{headers:{'Content-Type':'text/html'}});
+  }})());return}
  const isNav=e.request.mode==='navigate'||e.request.destination==='document';
  e.respondWith((async()=>{
   const cur=await caches.open(CUR);
