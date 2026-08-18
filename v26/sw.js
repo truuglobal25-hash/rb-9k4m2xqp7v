@@ -4,12 +4,15 @@
 // background refresh, last-known-good promoted only on healthy boot, and an
 // inline offline screen instead of a browser error page.
 const CUR='v26-cur-3', GOOD='v26-good-3', KEY='./';
+// Never cache a response that was redirected or came from another origin —
+// an auth wall (e.g. Cloudflare Access login) must never replace the app in cache.
+const ours=r=>{try{return r&&r.ok&&!r.redirected&&new URL(r.url).origin===location.origin}catch(e){return false}};
 const PRECACHE=['./','./manifest.json','./icon-192.png','./icon-512.png','./safe.html'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
  const c=await caches.open(CUR);
  for(const p of PRECACHE){try{
   const r=await fetch(p,{cache:'no-cache'});
-  if(r&&r.ok)await c.put(p==='./'?KEY:p,r.clone());
+  if(ours(r))await c.put(p==='./'?KEY:p,r.clone());
  }catch(err){}}
  await self.skipWaiting()})())});
 self.addEventListener('activate',e=>e.waitUntil((async()=>{
@@ -35,7 +38,7 @@ self.addEventListener('fetch',e=>{
  if(page==='safe.html'){e.respondWith((async()=>{
   try{
    const r=await fetch(e.request);
-   if(r&&r.ok){const c=await caches.open(CUR);await c.put('./safe.html',r.clone())}
+   if(ours(r)){const c=await caches.open(CUR);await c.put('./safe.html',r.clone())}
    return r;
   }catch(err){
    const c=await caches.open(CUR);
@@ -51,7 +54,7 @@ self.addEventListener('fetch',e=>{
   const cur=await caches.open(CUR);
   const refresh=(async()=>{try{
    const r=await fetch(e.request);
-   if(r&&r.ok){await cur.put(isNav?KEY:u.pathname,r.clone())}
+   if(ours(r)){await cur.put(isNav?KEY:u.pathname,r.clone())}
    return r}catch(err){return null}})();
   if(isNav){
    if(u.searchParams.has('lkg')){const g=await caches.open(GOOD);const lk=await g.match(KEY);if(lk)return lk}
