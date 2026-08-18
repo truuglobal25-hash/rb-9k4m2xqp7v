@@ -4,9 +4,10 @@
 // background refresh, last-known-good promoted only on healthy boot, and an
 // inline offline screen instead of a browser error page.
 const CUR='v26-cur-3', GOOD='v26-good-3', KEY='./';
-// Never cache a response that was redirected or came from another origin —
-// an auth wall (e.g. Cloudflare Access login) must never replace the app in cache.
-const ours=r=>{try{return r&&r.ok&&!r.redirected&&new URL(r.url).origin===location.origin}catch(e){return false}};
+// Never cache a response that ended up on another origin — an auth wall
+// (e.g. Cloudflare Access login) must never replace the app in cache.
+// Same-origin redirects (Cloudflare Pages pretty URLs) are fine.
+const ours=r=>{try{return r&&r.ok&&(!r.url||new URL(r.url).origin===location.origin)}catch(e){return false}};
 const PRECACHE=['./','./manifest.json','./icon-192.png','./icon-512.png','./safe.html'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
  const c=await caches.open(CUR);
@@ -33,9 +34,9 @@ self.addEventListener('fetch',e=>{
  if(e.request.method!=='GET'||u.origin!==location.origin)return;
  const page=u.pathname.split('/').pop();
  // network-test.html is a pure connectivity probe: never touched by the worker.
- if(page==='network-test.html')return;
+ if(page==='network-test.html'||page==='network-test')return;
  // safe.html is the rescue page: network first, cached copy only when offline.
- if(page==='safe.html'){e.respondWith((async()=>{
+ if(page==='safe.html'||page==='safe'){e.respondWith((async()=>{
   try{
    const r=await fetch(e.request);
    if(ours(r)){const c=await caches.open(CUR);await c.put('./safe.html',r.clone())}
