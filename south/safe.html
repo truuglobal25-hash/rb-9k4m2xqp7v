@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>South Route safe mode</title>
+<style>
+ body{background:#0E1420;color:#E8EEF6;font-family:-apple-system,Helvetica,Arial,sans-serif;margin:0;padding:20px 16px 60px;line-height:1.5}
+ h1{color:#FFB020;font-size:20px;margin:8px 0 2px}
+ .sub{color:#93A1B4;font-size:13px;margin:0 0 18px}
+ .card{background:#151D2C;border:1px solid #232E42;border-radius:14px;padding:14px 16px;margin:0 0 12px}
+ .card h2{font-size:14px;color:#93A1B4;margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px}
+ .ok{color:#2ECC71;font-weight:700}
+ .bad{color:#FF5A5F;font-weight:700}
+ .warn{color:#FFB020;font-weight:700}
+ .line{font-size:15px;margin:4px 0}
+ button{display:block;width:100%;margin:8px 0;padding:15px 14px;border-radius:12px;border:0;font-size:16px;font-weight:700;background:#FFB020;color:#111}
+ button.grey{background:#1B2536;color:#E8EEF6;border:1px solid #3A4A63}
+ button.red{background:#3A1B1F;color:#FFB6B9;border:1px solid #6E2A31}
+ .note{font-size:12px;color:#93A1B4;margin:2px 0 10px}
+ #log{font-size:13px;color:#B8C6DA;white-space:pre-wrap;word-break:break-word}
+ textarea{width:100%;height:120px;background:#0B1019;color:#B8C6DA;border:1px solid #232E42;border-radius:8px;font-size:11px;margin-top:8px;display:none}
+</style>
+</head>
+<body>
+<h1>SOUTH ROUTE — SAFE MODE</h1>
+<p class="sub">This page runs without the main app. Your visits, bills and notes are never deleted here.</p>
+
+<div class="card"><h2>1 · Server</h2><div class="line" id="srv">Checking the server now…</div></div>
+<div class="card"><h2>2 · Service worker</h2><div class="line" id="sw">Checking…</div></div>
+<div class="card"><h2>3 · Saved app copy</h2><div class="line" id="cache">Checking…</div></div>
+<div class="card"><h2>4 · Saved work on this phone</h2><div class="line" id="work">Checking…</div></div>
+
+<div class="card">
+ <h2>Actions</h2>
+ <button onclick="exportWork()">EXPORT SAVED WORK</button>
+ <p class="note">Downloads every saved item (visits, bills, notes, settings) as one file. Reads only — changes nothing.</p>
+ <textarea id="exportbox" readonly></textarea>
+ <button class="grey" onclick="fixSW()">REMOVE THE APP'S SERVICE WORKER</button>
+ <p class="note">Unregisters only the South Route worker so the next open comes fresh from the server. Your saved work stays.</p>
+ <button class="red" onclick="clearCaches()">DELETE BROKEN APP CACHES</button>
+ <p class="note">Removes only the app's saved copies (names starting "v26-"). Visits, bills and notes are stored separately and are not touched.</p>
+ <button class="grey" onclick="location.href='./'">OPEN THE APP</button>
+</div>
+
+<div class="card"><h2>Result log</h2><div id="log">—</div></div>
+
+<script>
+function put(id,html){document.getElementById(id).innerHTML=html}
+function logln(m){var l=document.getElementById('log');l.textContent=(l.textContent==='—'?'':l.textContent+'\n')+m}
+
+(function server(){
+ var t0=Date.now();
+ fetch('network-test.html?probe='+t0,{cache:'no-store'}).then(function(r){
+  if(r.ok)put('srv','<span class="ok">SERVER REACHED</span> just now (HTTP '+r.status+', '+(Date.now()-t0)+' ms)');
+  else put('srv','<span class="warn">Server answered with HTTP '+r.status+'</span>');
+ }).catch(function(){
+  put('srv','<span class="bad">SERVER NOT REACHED</span> — you are seeing the saved copy of this page. Check Settings → Cellular → Safari is ON, or try Wi-Fi.');
+ });
+})();
+
+(function sw(){
+ if(!('serviceWorker' in navigator)){put('sw','<span class="warn">Not supported in this browser</span>');return}
+ var ctl=navigator.serviceWorker.controller;
+ navigator.serviceWorker.getRegistrations().then(function(rs){
+  var v26=rs.filter(function(r){return r.scope.indexOf('/v26')>=0});
+  var s=ctl?'<span class="ok">A worker controls this page.</span> ':'<span class="warn">No worker controls this page.</span> ';
+  s+=v26.length?v26.length+' South Route worker registered.':'No South Route worker registered in this browser.';
+  put('sw',s);
+ }).catch(function(e){put('sw','<span class="warn">Could not read: '+e.message+'</span>')});
+})();
+
+(function cachecheck(){
+ if(!('caches' in window)){put('cache','<span class="warn">Cache storage not available</span>');return}
+ caches.keys().then(function(keys){
+  var v26=keys.filter(function(k){return k.indexOf('v26-')===0});
+  if(!v26.length){put('cache','<span class="warn">No saved app copy in this browser.</span> Open the app once on Wi-Fi and use Download Offline Copy.');return}
+  return caches.open(v26.indexOf('v26-cur-3')>=0?'v26-cur-3':v26[0]).then(function(c){
+   return c.match('./').then(function(r){
+    if(!r){put('cache','<span class="warn">Caches exist ('+v26.join(', ')+') but the main app entry is missing.</span>');return}
+    return r.clone().blob().then(function(b){
+     var mb=(b.size/1048576).toFixed(2);
+     var okApp=b.size>500000;
+     put('cache',(okApp?'<span class="ok">App copy saved: '+mb+' MB</span>':'<span class="bad">App entry too small: '+mb+' MB — broken copy</span>')+' · caches: '+v26.join(', '));
+    });
+   });
+  });
+ }).catch(function(e){put('cache','<span class="warn">Could not read: '+e.message+'</span>')});
+})();
+
+(function work(){
+ try{
+  var n=localStorage.length,chars=0,names=[];
+  for(var i=0;i<n;i++){var k=localStorage.key(i);names.push(k);chars+=(localStorage.getItem(k)||'').length}
+  if(!n){put('work','<span class="warn">No saved work found in this browser.</span> (If you normally use the installed icon, its saved work lives there, not here.)');return}
+  put('work','<span class="ok">'+n+' saved items, about '+(chars/1024).toFixed(0)+' KB.</span><br><span style="font-size:12px;color:#93A1B4">'+names.join(' · ')+'</span>');
+ }catch(e){put('work','<span class="warn">Could not read: '+e.message+'</span>')}
+})();
+
+function exportWork(){
+ try{
+  var out={exported:new Date().toISOString(),origin:location.origin,keys:localStorage.length,data:{}};
+  for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);out.data[k]=localStorage.getItem(k)}
+  var txt=JSON.stringify(out);
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([txt],{type:'application/json'}));
+  a.download='north-route-saved-work-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a);a.click();a.remove();
+  var box=document.getElementById('exportbox');box.value=txt;box.style.display='block';
+  logln('Export ready: '+out.keys+' items, '+(txt.length/1024).toFixed(0)+' KB. If no file appeared, the same data is in the box above — hold to select all and copy.');
+ }catch(e){logln('Export failed: '+e.message)}
+}
+
+function fixSW(){
+ if(!('serviceWorker' in navigator)){logln('No service worker support here.');return}
+ navigator.serviceWorker.getRegistrations().then(function(rs){
+  var v26=rs.filter(function(r){return r.scope.indexOf('/v26')>=0});
+  if(!v26.length){logln('No South Route worker to remove.');return}
+  Promise.all(v26.map(function(r){return r.unregister()})).then(function(res){
+   logln('Removed '+res.filter(Boolean).length+' of '+v26.length+' South Route worker(s). Close this tab, then open the app link again — first open needs internet.');
+  });
+ }).catch(function(e){logln('Could not remove: '+e.message)});
+}
+
+function clearCaches(){
+ if(!('caches' in window)){logln('No cache storage here.');return}
+ caches.keys().then(function(keys){
+  var v26=keys.filter(function(k){return k.indexOf('v26-')===0});
+  if(!v26.length){logln('No app caches to delete.');return}
+  Promise.all(v26.map(function(k){return caches.delete(k)})).then(function(){
+   logln('Deleted app caches: '+v26.join(', ')+'. Saved work untouched. Open the app on internet once, then use Download Offline Copy again.');
+  });
+ }).catch(function(e){logln('Could not delete: '+e.message)});
+}
+</script>
+</body>
+</html>
