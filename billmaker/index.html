@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bill Maker">
 <meta name="theme-color" content="#2E6A53">
-<meta name="x-build" content="1787472629">
+<meta name="x-build" content="1787500559">
 <style>/* Bill Maker — visual system.
    Deep ink, warm porcelain, mineral green, burnt tangerine, muted brick.
    No gradients. No glass. No emoji. One spacing scale, one type scale,
@@ -776,7 +776,10 @@ function movePage(i, d) {
 }
 
 /* ------------------------------------------------------------- reading -- */
-const readerUrl = () => (settings.reader || '').trim() || '/api/read';
+// The deployed reading service. Settings can override it, but out of the box
+// the app reads with no setup at all.
+const DEFAULT_READER = 'https://routebook-reader.tt-smart-bill-reader-8263.workers.dev';
+const readerUrl = () => (settings.reader || '').trim() || DEFAULT_READER;
 const blobToB64 = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(String(f.result).split(',')[1]); f.readAsDataURL(b); });
 
 let readError = '';
@@ -1707,8 +1710,8 @@ function vSettings() {
     <div class="card">
       <div class="eyebrow">Reading service</div>
       <label class="field"><span>Address</span>
-      <input value="${esc(settings.reader || '')}" data-set="reader" placeholder="https://…workers.dev" inputmode="url"></label>
-      <p class="hint">Photographs are sent here once, to be read. The key lives on the service, never on this phone. Leave empty to use /api/read on this site.</p>
+      <input value="${esc(settings.reader || '')}" data-set="reader" placeholder="${esc(DEFAULT_READER)}" inputmode="url"></label>
+      <p class="hint">Photographs are sent here once, to be read. The key lives on the service, never on this phone. Leave empty to use the standard service.</p>
     </div>
     <div class="card">
       <div class="eyebrow">Appearance</div>
