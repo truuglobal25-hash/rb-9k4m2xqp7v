@@ -16,17 +16,3 @@
 /v26/manifest.json
   Cache-Control: no-cache
 
-# Bill Maker: same protections, but its reading service lives on workers.dev
-/billmaker/*
-  X-Content-Type-Options: nosniff
-  X-Frame-Options: DENY
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.workers.dev; font-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'
-  Referrer-Policy: no-referrer
-  X-Robots-Tag: noindex, nofollow
-  Permissions-Policy: geolocation=(), camera=(self), microphone=()
-
-/billmaker/sw.js
-  Cache-Control: no-cache
-
-/billmaker/index.html
-  Cache-Control: no-cache
