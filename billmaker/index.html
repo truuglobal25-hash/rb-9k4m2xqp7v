@@ -1,0 +1,2309 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Bill Maker</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Bill Maker">
+<meta name="theme-color" content="#2E6A53">
+<meta name="x-build" content="1787472311">
+<style>/* Bill Maker — visual system.
+   Deep ink, warm porcelain, mineral green, burnt tangerine, muted brick.
+   No gradients. No glass. No emoji. One spacing scale, one type scale,
+   one border system, one icon family (inline SVG, 1.75 stroke). */
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+
+:root{
+  /* ---- ink ---- */
+  --ink:#15181B; --ink-2:#252A2F; --ink-3:#3C444C; --ink-4:#5C666F;
+  /* ---- paper ---- */
+  --paper:#F3EFE7; --paper-2:#E8E2D6; --paper-3:#FBF9F4; --paper-4:#D8D0C0;
+  /* ---- accents ---- */
+  --green:#2E6A53; --green-2:#3E8A6C; --green-tint:#E2EDE7;
+  --tang:#BE571C; --tang-2:#D9722F; --tang-tint:#F6E7DA;
+  --brick:#9B3A31; --brick-2:#B84C41; --brick-tint:#F4E1DE;
+
+  /* ---- semantic ---- */
+  --bg:var(--paper); --surface:var(--paper-3); --surface-2:var(--paper-2);
+  --line:rgba(21,24,27,.16); --line-soft:rgba(21,24,27,.09);
+  --text:var(--ink); --text-2:var(--ink-3); --text-3:var(--ink-4);
+  --edge:rgba(21,24,27,.28);          /* the pressable edge under buttons */
+
+  /* ---- spacing (4pt rhythm) ---- */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px;
+  /* ---- type ---- */
+  --t-xs:12px; --t-sm:13px; --t-md:15px; --t-base:17px; --t-lg:20px;
+  --t-xl:24px; --t-2xl:30px;
+  /* ---- radius: square-ish, never pills ---- */
+  --r-sm:4px; --r-md:7px; --r-lg:11px;
+  --tap:48px;
+  --safe-t:env(safe-area-inset-top,0px);
+  --safe-b:env(safe-area-inset-bottom,0px);
+  --nav-h:calc(58px + var(--safe-b));
+  --fast:120ms; --mid:200ms;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme=light]){
+    --bg:#101315; --surface:#181C1F; --surface-2:#20252A;
+    --line:rgba(243,239,231,.16); --line-soft:rgba(243,239,231,.09);
+    --text:#F0ECE4; --text-2:#B9C0C6; --text-3:#8B949B;
+    --edge:rgba(0,0,0,.55);
+    --green-tint:#1B2C26; --tang-tint:#2E211A; --brick-tint:#2E1D1B;
+    --green-2:#4F9E7E; --tang-2:#E0863F; --brick-2:#C96054;
+  }
+}
+[data-theme=dark]{
+  --bg:#101315; --surface:#181C1F; --surface-2:#20252A;
+  --line:rgba(243,239,231,.16); --line-soft:rgba(243,239,231,.09);
+  --text:#F0ECE4; --text-2:#B9C0C6; --text-3:#8B949B; --edge:rgba(0,0,0,.55);
+  --green-tint:#1B2C26; --tang-tint:#2E211A; --brick-tint:#2E1D1B;
+  --green-2:#4F9E7E; --tang-2:#E0863F; --brick-2:#C96054;
+}
+
+body{
+  background:var(--bg); color:var(--text);
+  font:400 var(--t-base)/1.45 ui-sans-serif,-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;
+  font-feature-settings:"ss01","cv05";
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  overscroll-behavior-y:none;
+}
+/* prices, quantities and totals must never jiggle as digits change */
+.num,input[type=number],.money{font-variant-numeric:tabular-nums lining-nums}
+
+h1,h2,h3{margin:0;font-weight:640;letter-spacing:-.012em;line-height:1.2}
+h1{font-size:var(--t-xl)}
+h2{font-size:var(--t-lg)}
+h3{font-size:var(--t-base)}
+p{margin:0 0 var(--s3)}
+a{color:var(--green-2)}
+
+/* ---------- layout ---------- */
+#app{min-height:100dvh;padding-bottom:calc(var(--nav-h) + var(--s4))}
+.screen{padding:var(--s4);max-width:760px;margin:0 auto}
+@media(min-width:900px){.screen{max-width:1180px;padding:var(--s5)}}
+.topbar{
+  position:sticky;top:0;z-index:20;background:var(--bg);
+  padding:calc(var(--safe-t) + var(--s3)) var(--s4) var(--s3);
+  border-bottom:1px solid var(--line-soft);
+  display:flex;align-items:center;gap:var(--s3);min-height:calc(var(--safe-t) + 56px)
+}
+.topbar h1{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.eyebrow{font-size:var(--t-xs);letter-spacing:.09em;text-transform:uppercase;
+  color:var(--text-3);font-weight:600;margin-bottom:var(--s1)}
+
+/* ---------- pressable ---------- */
+.btn{
+  -webkit-appearance:none;appearance:none;font:inherit;font-weight:600;
+  min-height:var(--tap);padding:0 var(--s4);
+  display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);
+  border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--surface);color:var(--text);
+  box-shadow:0 2px 0 var(--edge);
+  transition:transform var(--fast) ease-out, box-shadow var(--fast) ease-out,
+             background var(--fast) ease-out;
+  cursor:pointer;text-align:center;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+.btn:active:not(:disabled){transform:translateY(2px);box-shadow:0 0 0 var(--edge)}
+.btn:disabled{opacity:.42;box-shadow:none;cursor:not-allowed}
+.btn:focus-visible{outline:3px solid var(--green-2);outline-offset:2px}
+.btn.primary{background:var(--green);border-color:var(--green);color:#F7FBF9}
+.btn.accent{background:var(--tang);border-color:var(--tang);color:#FFF8F2}
+.btn.danger{background:var(--surface);border-color:var(--brick);color:var(--brick-2)}
+.btn.quiet{background:transparent;box-shadow:none;border-color:var(--line-soft);font-weight:500}
+.btn.quiet:active:not(:disabled){transform:none;background:var(--surface-2)}
+.btn.wide{width:100%}
+.btn.sm{min-height:40px;padding:0 var(--s3);font-size:var(--t-md)}
+.btn svg{width:19px;height:19px;flex:0 0 auto}
+.btn-row{display:flex;gap:var(--s2);flex-wrap:wrap}
+.btn-row>.btn{flex:1 1 auto}
+@media(prefers-reduced-motion:reduce){*{transition-duration:1ms!important;animation-duration:1ms!important}}
+
+/* the two opening choices */
+.choice{
+  display:grid;grid-template-columns:44px 1fr;gap:var(--s3) var(--s4);
+  align-items:start;text-align:left;width:100%;
+  padding:var(--s5) var(--s4);min-height:112px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:0 3px 0 var(--edge);color:var(--text);font:inherit;cursor:pointer;
+  transition:transform var(--fast) ease-out, box-shadow var(--fast) ease-out;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+.choice:active{transform:translateY(3px);box-shadow:0 0 0 var(--edge)}
+.choice:focus-visible{outline:3px solid var(--green-2);outline-offset:2px}
+.choice .ttl{grid-column:2;font-size:var(--t-lg);font-weight:650;letter-spacing:-.01em}
+.choice .sub{grid-column:2;font-size:var(--t-md);color:var(--text-2);line-height:1.4}
+.choice svg{grid-row:1/3;width:32px;height:32px;color:var(--green)}
+.choice.accent svg{color:var(--tang)}
+
+/* ---------- surfaces ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:var(--s4);margin-bottom:var(--s3)}
+.card>h2,.card>h3{margin-bottom:var(--s3)}
+.rule{height:1px;background:var(--line-soft);margin:var(--s4) 0;border:0}
+
+/* ---------- fields ---------- */
+.field{display:block;margin-bottom:var(--s3)}
+.field>span{display:block;font-size:var(--t-sm);font-weight:600;color:var(--text-2);
+  margin-bottom:var(--s1)}
+input,select,textarea{
+  width:100%;min-height:var(--tap);padding:var(--s3);
+  font:inherit;font-size:16px;              /* 16px stops iOS zooming on focus */
+  color:var(--text);background:var(--surface);
+  border:1px solid var(--line);border-radius:var(--r-md);
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--green-2);outline-offset:-1px;
+  border-color:var(--green-2)}
+input[readonly]{background:var(--surface-2);color:var(--text-2)}
+.hint{font-size:var(--t-sm);color:var(--text-2);margin-top:var(--s1)}
+
+/* ---------- state colour: never colour alone, always a word too ---------- */
+.tag{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:var(--r-sm);
+  font-size:var(--t-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  border:1px solid currentColor;background:var(--surface)}
+.tag.ok{color:var(--green-2);background:var(--green-tint)}
+.tag.review{color:var(--tang-2);background:var(--tang-tint)}
+.tag.bad{color:var(--brick-2);background:var(--brick-tint)}
+.tag.plain{color:var(--text-3);background:var(--surface-2)}
+.tag svg{width:13px;height:13px}
+
+/* ---------- lists ---------- */
+.list{list-style:none;margin:0;padding:0}
+.row{display:flex;align-items:center;gap:var(--s3);width:100%;
+  min-height:var(--tap);padding:var(--s3) 0;border-bottom:1px solid var(--line-soft);
+  background:none;border-left:0;border-right:0;border-top:0;color:var(--text);
+  font:inherit;text-align:left;cursor:pointer}
+.row:last-child{border-bottom:0}
+.row:active{background:var(--surface-2)}
+.row .grow{flex:1;min-width:0}
+.row .nm{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .sub{display:block;font-size:var(--t-sm);color:var(--text-2);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.vlist{position:relative;overflow-y:auto;-webkit-overflow-scrolling:touch}
+
+/* ---------- bottom navigation ---------- */
+nav.tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  display:grid;grid-template-columns:repeat(5,1fr);
+  background:var(--surface);border-top:1px solid var(--line);
+  padding-bottom:var(--safe-b);
+}
+nav.tabs button{
+  -webkit-appearance:none;appearance:none;border:0;background:none;font:inherit;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  min-height:58px;padding:6px 2px;color:var(--text-3);font-size:11px;font-weight:600;
+  cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;
+}
+nav.tabs button svg{width:23px;height:23px}
+nav.tabs button[aria-current=page]{color:var(--green-2)}
+nav.tabs button:active{background:var(--surface-2)}
+
+/* ---------- honest staged progress ---------- */
+.stages{list-style:none;margin:var(--s3) 0 0;padding:0}
+.stages li{display:flex;align-items:center;gap:var(--s3);padding:var(--s2) 0;
+  color:var(--text-3);font-size:var(--t-md)}
+.stages li[data-state=now]{color:var(--text);font-weight:600}
+.stages li[data-state=done]{color:var(--text-2)}
+.dot{width:11px;height:11px;border-radius:50%;border:2px solid currentColor;flex:0 0 auto}
+.stages li[data-state=done] .dot{background:var(--green-2);border-color:var(--green-2)}
+.stages li[data-state=now] .dot{background:var(--tang);border-color:var(--tang);
+  animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+
+/* ---------- review ---------- */
+.line{border:1px solid var(--line);border-left:4px solid var(--line);
+  border-radius:var(--r-md);padding:var(--s3);margin-bottom:var(--s3);background:var(--surface)}
+.line.ok{border-left-color:var(--green)}
+.line.review{border-left-color:var(--tang)}
+.line.bad{border-left-color:var(--brick)}
+.line.blank{opacity:.62;border-left-color:var(--text-3)}
+.line-head{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-bottom:var(--s2)}
+.line-head .idx{font-weight:700;color:var(--text-3);font-variant-numeric:tabular-nums}
+.crop{display:block;width:100%;height:56px;overflow:hidden;border-radius:var(--r-sm);
+  border:1px solid var(--line-soft);background:#fff;margin-bottom:var(--s2);
+  padding:0;cursor:zoom-in}
+.crop img{display:block;transform-origin:0 0}
+.cands{display:grid;gap:var(--s2);margin-top:var(--s2)}
+.cand{display:block;width:100%;text-align:left;padding:var(--s3);font:inherit;color:var(--text);
+  background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-md);
+  min-height:var(--tap);cursor:pointer}
+.cand[aria-pressed=true]{border-color:var(--green);background:var(--green-tint);
+  box-shadow:inset 0 0 0 1px var(--green)}
+.cand .nm{font-weight:600}
+.cand .sub{font-size:var(--t-sm);color:var(--text-2)}
+.qty-row{display:flex;align-items:center;gap:var(--s2);margin-top:var(--s2);flex-wrap:wrap}
+.stepper{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:var(--r-md);
+  overflow:hidden;background:var(--surface)}
+.stepper button{width:var(--tap);min-height:var(--tap);border:0;background:none;font:inherit;
+  font-size:var(--t-lg);color:var(--text);cursor:pointer;touch-action:manipulation}
+.stepper button:active{background:var(--surface-2)}
+.stepper input{width:64px;min-height:var(--tap);text-align:center;border:0;border-left:1px solid var(--line);
+  border-right:1px solid var(--line);border-radius:0}
+
+@media(min-width:900px){
+  .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--s5);align-items:start}
+  .split .sticky{position:sticky;top:calc(var(--safe-t) + 76px)}
+  nav.tabs{grid-template-columns:repeat(5,minmax(0,140px));justify-content:center}
+}
+
+/* ---------- zoom viewer ---------- */
+.viewer{position:fixed;inset:0;z-index:60;background:#0C0E10;display:flex;flex-direction:column;
+  padding:calc(var(--safe-t) + var(--s2)) var(--s2) calc(var(--safe-b) + var(--s2))}
+.viewer .bar{display:flex;gap:var(--s2);justify-content:center;padding-bottom:var(--s2);flex-wrap:wrap}
+.viewer .pane{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;display:flex;justify-content:center}
+.viewer img{max-width:none;height:auto;align-self:flex-start}
+
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.empty{text-align:center;padding:var(--s7) var(--s4);color:var(--text-2)}
+.empty svg{width:40px;height:40px;color:var(--text-3);margin-bottom:var(--s3)}
+@media print{nav.tabs,.topbar,.btn,.viewer{display:none!important}}
+</style></head><body>
+<div id="app"><div class="empty" style="padding-top:40vh">Opening…</div></div>
+<script src="billdata-618d01744d.js"></script>
+<script>/* ============================================================================
+   Bill Maker — core: identity, storage, indexes, router.
+   Everything this app owns is prefixed bm_ and shared with nothing else.
+   ========================================================================= */
+'use strict';
+
+const APP_VER = '1.0.0';
+const K = s => 'bm_' + s;                       // its own local-storage prefix
+const DATA = window.__BM__;                     // {checked, products[], customers[]}
+const PROD = DATA.products, CUST = DATA.customers;
+const SNAPSHOT = DATA.checked;                  // when the Lightspeed catalogue was taken
+
+const LS = (k, d) => { try { const v = localStorage.getItem(K(k)); return v == null ? d : JSON.parse(v); } catch (_) { return d; } };
+const SAVE = (k, v) => { try { localStorage.setItem(K(k), JSON.stringify(v)); return true; } catch (_) { return false; } };
+const DEL = k => { try { localStorage.removeItem(K(k)); } catch (_) {} };
+
+const esc = t => String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const money = c => '$' + (c / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms || 8); } catch (_) {} };
+const telFmt = p => { const d = String(p || '').replace(/\D/g, ''); return d.length >= 7 ? '+1868' + d.slice(-7) : ''; };
+const waNum = p => { const d = String(p || '').replace(/\D/g, ''); return d.length >= 7 ? '1868' + d.slice(-7) : ''; };
+
+/* ---------------------------------------------------------------- icons --
+   One family: 24x24, 1.75 stroke, round caps, currentColor. No emoji. */
+const ICON = {
+  camera: '<path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.1-2h8.4l1.1 2h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.4"/>',
+  pen: '<path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M14.5 6.5 17.5 9.5"/>',
+  doc: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/><path d="M9 12h6M9 16h6"/>',
+  people: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="M16 5.5a3.2 3.2 0 0 1 0 5"/><path d="M17 14.6a5.5 5.5 0 0 1 3.5 5.4"/>',
+  box: '<path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5 12 12l8.5-4.5M12 12v9"/>',
+  gear: '<circle cx="12" cy="12" r="3.1"/><path d="M12 2.8v2.4M12 18.8v2.4M4.5 12H2.1M21.9 12h-2.4M6.4 6.4 4.7 4.7M19.3 19.3l-1.7-1.7M17.6 6.4l1.7-1.7M4.7 19.3l1.7-1.7"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  search: '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+  check: '<path d="M4.5 12.5 9.5 17.5 19.5 7"/>',
+  alert: '<path d="M12 4.5 21 20H3z"/><path d="M12 10v4.5M12 17.4v.1"/>',
+  eye: '<path d="M2.5 12S6 5.8 12 5.8 21.5 12 21.5 12 18 18.2 12 18.2 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>',
+  back: '<path d="M15 19 8 12l7-7"/>',
+  x: '<path d="M6 6l12 12M18 6 6 18"/>',
+  trash: '<path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',
+  copy: '<path d="M9 9h11v11H9z"/><path d="M15 9V4H4v11h5"/>',
+  share: '<path d="M12 15V4"/><path d="m8 8 4-4 4 4"/><path d="M5 13v6.5h14V13"/>',
+  print: '<path d="M7 9V3.5h10V9"/><path d="M5 9h14v7h-3v4.5H8V16H5z"/>',
+  rotate: '<path d="M20 5v5h-5"/><path d="M19.5 10A8 8 0 1 0 20 14.5"/>',
+  crop: '<path d="M6 2.5V18h15.5"/><path d="M2.5 6H18v15.5"/>',
+  wifi: '<path d="M12 18.5v.1"/><path d="M8.5 15a5 5 0 0 1 7 0"/><path d="M5.2 11.6a10 10 0 0 1 13.6 0"/>',
+};
+const ico = (n, cls) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+ stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${cls ? ` class="${cls}"` : ''}>${ICON[n] || ''}</svg>`;
+
+/* ------------------------------------------------------------- storage --
+   Photographs and finished PDFs are far too big for local storage, so they
+   live in this app's own IndexedDB. Nothing here ever leaves the phone
+   except the one time a photograph is sent to be read. */
+let _db = null;
+function db() {
+  return _db || (_db = new Promise((res, rej) => {
+    const r = indexedDB.open('bm_store', 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      if (!d.objectStoreNames.contains('photos')) d.createObjectStore('photos');
+      if (!d.objectStoreNames.contains('pdfs')) d.createObjectStore('pdfs');
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  }));
+}
+const idb = {
+  async put(store, k, v) { const d = await db(); return new Promise((res, rej) => { const t = d.transaction(store, 'readwrite'); t.objectStore(store).put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); }); },
+  async get(store, k) { const d = await db(); return new Promise(res => { const q = d.transaction(store, 'readonly').objectStore(store).get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); },
+  async del(store, k) { const d = await db(); return new Promise(res => { const t = d.transaction(store, 'readwrite'); t.objectStore(store).delete(k); t.oncomplete = res; t.onerror = res; }); },
+  async keys(store) { const d = await db(); return new Promise(res => { const q = d.transaction(store, 'readonly').objectStore(store).getAllKeys(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); }); },
+  async count(store) { const d = await db(); return new Promise(res => { const q = d.transaction(store, 'readonly').objectStore(store).count(); q.onsuccess = () => res(q.result); q.onerror = () => res(0); }); },
+};
+
+/* --------------------------------------------------------- app records -- */
+const orders = LS('orders', {});          // drafts and finished orders
+const fixes = LS('fixes', {});            // handwriting -> catalogue, learned here only
+const favs = LS('favs', {});
+const recents = LS('recents', []);
+const manualProducts = LS('manualprods', []);   // only the ones explicitly kept
+let settings = LS('settings', { reader: '', theme: 'system', rep: '', haptics: true });
+
+/* ------------------------------------------------------------- search --
+   One inverted index built once at boot. 17,000+ customers must answer in
+   well under 100ms, so nothing walks the whole list on every keystroke. */
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+
+// How the reps actually spell things, taken from real order books.
+const SPELL = {
+  wouish: 'wowish', wonish: 'wowish', rosemarry: 'rosemary', rosmarry: 'rosemary',
+  nepis: 'nepsis', nepirs: 'nepsis', nepris: 'nepsis', blackesed: 'blackseed', blacksed: 'blackseed',
+  insence: 'incense', insense: 'incense', inserce: 'incense', vasence: 'incense', incence: 'incense',
+  message: 'massage', harbodent: 'herbodent', mesuak: 'meswak', meswak: 'meswak',
+  shanespro: 'shavepro', shauespro: 'shavepro', shavespro: 'shavepro',
+  colerey: 'celery', clorey: 'celery', glorey: 'glorey', vijohn: 'vijohn',
+  shilayit: 'shilajit', ashuna: 'ashwagandha', ashwa: 'ashwagandha', ashuagandha: 'ashwagandha',
+  multiuitamin: 'multivitamin', kojik: 'kojic', vere: 'vera', seamos: 'seamoss',
+  yogi: 'yogiraj', yogiraaj: 'yogiraj', alchol: 'alcoholic', alcholic: 'alcoholic',
+  wharler: 'inhaler', whaler: 'inhaler', sereum: 'serum', efferuescent: 'effervescent',
+  sebler: 'seller', sebbers: 'sellers', redonion: 'red onion',
+  beer: 'energy drink', beers: 'energy drink',   // the herbal "beers" are catalogued as energy drinks
+};
+const STOP = new Set(['the', 'of', 'a', 'and', 'for', 'with', 'in', 'on', 'ltd', 'limited',
+  'ps', 'pcs', 'pc', 'piece', 'pieces', 'case', 'cases', 'box', 'boxes', 'pack', 'packs',
+  'ctn', 'carton', 'dozen', 'each', 'all', 'x', 'mix', 'mixed']);
+// single letters left over from apostrophes ("daisy's" -> "daisy s") are noise
+const toks = s => norm(s).split(' ').map(w => SPELL[w] || w).join(' ').split(' ')
+  .filter(w => w.length > 1 || /\d/.test(w));
+const keyToks = s => toks(s).filter(w => !STOP.has(w));
+
+function buildIndex(rows, textOf) {
+  const map = new Map();                       // 3-letter prefix -> row numbers
+  rows.forEach((r, i) => {
+    const seen = new Set();
+    for (const w of toks(textOf(r))) {
+      const p = w.slice(0, 3);
+      if (seen.has(p)) continue;
+      seen.add(p);
+      let a = map.get(p); if (!a) map.set(p, a = []);
+      a.push(i);
+    }
+  });
+  return map;
+}
+
+// Dice bigram similarity — forgiving of one or two wrong letters.
+function dice(a, b) {
+  if (a === b) return 1;
+  if (a.length < 2 || b.length < 2) return 0;
+  const m = new Map();
+  for (let i = 0; i < a.length - 1; i++) { const g = a.slice(i, i + 2); m.set(g, (m.get(g) || 0) + 1); }
+  let hit = 0;
+  for (let i = 0; i < b.length - 1; i++) { const g = b.slice(i, i + 2), c = m.get(g); if (c > 0) { m.set(g, c - 1); hit++; } }
+  return 2 * hit / (a.length + b.length - 2);
+}
+
+/* Every product carries its supplying company. This is the guard that stops a
+   MYCO brand ever being filed under Yusuf Overseas. */
+const MYCO_BRAND = /dr\.? ?herbician|vi ?[- ]?john|floraura|tails? ?(&|and)? ?treat/i;
+const companyOf = p => p.co;
+
+const SIZE_RX = /(\d+)\s*(ml|g|gm|kg|l|pcs|pc)\b/i;
+const PX = PROD.map((p, i) => {
+  const t = keyToks(p.n + ' ' + (p.b || '') + ' ' + (p.als || ''));
+  return { i, p, t, flat: t.join(''), n: norm(p.n), a: norm(p.als || ''),
+           sz: norm((p.n.match(SIZE_RX) || [''])[0]) };
+});
+const P_INDEX = buildIndex(PX, e => e.p.n + ' ' + (e.p.b || '') + ' ' + (e.p.als || '') + ' ' + e.p.sku);
+const C_INDEX = buildIndex(CUST, c => c.n + ' ' + (c.aka || '') + ' ' + (c.t || '') + ' ' + (c.ad || ''));
+const CUST_BY_PHONE = new Map();
+CUST.forEach((c, i) => { if (c.p) { let a = CUST_BY_PHONE.get(c.p); if (!a) CUST_BY_PHONE.set(c.p, a = []); a.push(i); } });
+
+function candidateRows(index, q, cap) {
+  const words = toks(q); if (!words.length) return [];
+  const count = new Map();
+  for (const w of words) {
+    const rows = index.get(w.slice(0, 3)); if (!rows) continue;
+    for (const r of rows) count.set(r, (count.get(r) || 0) + 1);
+  }
+  const out = [...count.entries()].sort((a, b) => b[1] - a[1]).slice(0, cap || 1400);
+  return out.map(e => e[0]);
+}
+
+;
+/* ============================================================================
+   Matching. Nothing here ever invents a product, price, quantity or customer.
+   ========================================================================= */
+
+const UNIT_WORDS = {
+  ps: 'piece', pcs: 'piece', pc: 'piece', piece: 'piece', pieces: 'piece', unit: 'piece', units: 'piece',
+  pack: 'pack', packs: 'pack', pk: 'pack',
+  case: 'case', cases: 'case', cs: 'case', ctn: 'carton', carton: 'carton', cartons: 'carton',
+  box: 'case', boxes: 'case', dozen: 'pack',
+};
+const UNIT_LABEL = { piece: 'Pieces', pack: 'Packs', case: 'Cases', carton: 'Cartons' };
+
+/* ---- product search: used by the search box and by handwriting matching ---- */
+function searchProducts(q, opts) {
+  opts = opts || {};
+  // A bare 1-4 digit number in an order line is a quantity, not a product word.
+  // Left in, it dilutes coverage and sinks real matches ("6 small Yogiraj").
+  // Sizes survive because they carry their unit ("200ml"); barcodes are 6+.
+  const words = keyToks(q).filter(w => !/^\d{1,4}$/.test(w));
+  if (!words.length) return [];
+  const digits = (q.match(/\d{6,}/g) || []);
+  const flatQ = words.join('');
+  const qSize = norm((q.match(SIZE_RX) || [''])[0]);
+  const learned = fixes[words.join(' ')];
+  const hist = opts.history || null;
+  const rows = candidateRows(P_INDEX, q);
+  const out = [];
+
+  const consider = e => {
+    const p = e.p;
+    if (opts.company && p.co !== opts.company) return;
+    let s = 0, why = '', isLearned = false;
+
+    if (digits.length && digits.indexOf(p.sku) >= 0) { s = 100; why = 'the barcode is written on the page'; }
+    else if (learned && learned.sku === p.sku && learned.co === p.co) { s = 97; why = 'you corrected this same writing before'; isLearned = true; }
+    else if (flatQ === e.n.replace(/ /g, '')) { s = 95; why = 'exact catalogue name'; }
+    else if (e.a && flatQ === e.a.replace(/ /g, '')) { s = 92; why = 'exact catalogue alias'; }
+    else if (flatQ.length >= 6 && e.flat.indexOf(flatQ) >= 0) { s = 88; why = 'the whole line appears in the catalogue name'; }
+    else {
+      let got = 0;
+      for (const w of words) {
+        let best = 0;
+        for (const t of e.t) {
+          if (t === w) { best = 1; break; }
+          const d = (w.length >= 4 && t.length >= 4) ? dice(w, t)
+                  : (t.indexOf(w) === 0 && w.length >= 3 ? 0.85 : 0);
+          if (d > best) best = d;
+        }
+        if (best >= 0.72) got += best;
+      }
+      const cov = got / words.length;
+      if (cov < 0.34) return;
+      s = 34 + cov * 52;
+      why = cov >= 0.95 ? 'every word matches' : cov >= 0.7 ? 'most words match' : 'some words match';
+      if (qSize && e.sz && qSize === e.sz) { s += 5; why += ', size agrees'; }
+      else if (qSize && e.sz) { s -= 9; why += ', but the size is different'; }
+      if (p.b && words.some(w => w.length > 3 && norm(p.b).indexOf(w) >= 0)) s += 3;
+    }
+    // Buying history may only move a candidate up the list. It can never be the
+    // thing that confirms a line — see tierFor().
+    if (hist && hist[p.co + '|' + p.sku] && s < 85) {
+      s += Math.min(6, hist[p.co + '|' + p.sku]);
+      why += ', this customer bought it before';
+    }
+    if (s > 0) out.push({ key: p.co + '|' + p.sku, p, score: Math.min(99, Math.round(s)), why, learned: isLearned });
+  };
+
+  for (const r of rows) consider(PX[r]);
+  if (digits.length) for (const e of PX) if (digits.indexOf(e.p.sku) >= 0) { if (!out.some(o => o.p === e.p)) consider(e); }
+  out.sort((a, b) => b.score - a.score);
+  return out.slice(0, opts.limit || 3);
+}
+
+/* ---- the five states the owner asked for ---- */
+const STATE = {
+  OK: 'CONFIRMED', REVIEW: 'REVIEW THIS', UNREAD: 'COULD NOT READ',
+  NOTFOUND: 'PRODUCT NOT FOUND', COMPANY: 'COMPANY NEEDS CHECKING',
+  ASSORT: 'MIXED CASE — CHOOSE THE PRODUCTS',
+};
+function tierFor(line) {
+  if (line.readConf === 'unreadable' || !line.text.trim()) return 'UNREAD';
+  if (line.kind === 'assortment') return 'ASSORT';
+  const c = line.cands || [];
+  if (!c.length) return 'NOTFOUND';
+  // A remembered correction ranks first but is still shown for confirmation:
+  // one mistaken tap must never become a silent habit.
+  if (c[0].learned) return 'REVIEW';
+  const gap = c[1] ? c[0].score - c[1].score : 99;
+  if (c[0].score >= 85 && gap >= 8 && line.readConf === 'clear') return 'OK';
+  if (c[0].score >= 55) return 'REVIEW';
+  return 'NOTFOUND';
+}
+function companyProblem(line) {
+  if (!line.sku) return false;
+  const p = productOf(line);
+  if (!p) return false;
+  if (line.pageCompany && line.pageCompany !== p.co) return true;   // the page says otherwise
+  return MYCO_BRAND.test(line.text) && p.co !== 'MYCO';             // a MYCO brand filed under YOL
+}
+const productOf = l => l.sku ? PROD.find(p => p.sku === l.sku && p.co === l.co) : null;
+const productByKey = k => { const [co, sku] = String(k).split('|'); return PROD.find(p => p.co === co && p.sku === sku); };
+
+/* ---- customer search ---- */
+function searchCustomers(q, limit) {
+  const phone = String(q || '').replace(/\D/g, '');
+  const out = [];
+  const push = (i, sc, why) => out.push({ c: CUST[i], i, score: sc, why });
+
+  if (phone.length >= 7) {                       // a phone number is the strongest signal there is
+    const hit = CUST_BY_PHONE.get(phone.slice(-7));
+    if (hit) hit.forEach(i => push(i, 100, 'phone number matches'));
+  }
+  const words = keyToks(q);
+  if (words.length) {
+    const qn = norm(q), flatQ = words.join('');
+    for (const r of candidateRows(C_INDEX, q)) {
+      const c = CUST[r];
+      if (out.some(o => o.i === r)) continue;
+      const cn = norm(c.n), ct = keyToks(c.n + ' ' + (c.aka || ''));
+      let s = 0, why = '';
+      if (cn === qn) { s = 92; why = 'name matches exactly'; }
+      else if (flatQ.length >= 5 && cn.replace(/ /g, '').indexOf(flatQ) >= 0) { s = 80; why = 'name contains what you typed'; }
+      else {
+        let hit = 0;
+        for (const w of words) if (ct.some(t => t === w || (w.length > 4 && dice(w, t) > 0.82))) hit++;
+        const cov = hit / words.length;
+        if (cov < 0.45) continue;
+        s = 30 + cov * 45;
+        why = cov >= 0.99 ? 'every word matches' : 'name is close';
+      }
+      if (c.aka && norm(c.aka).indexOf(qn) >= 0 && qn) { s += 6; why += ', known also by that name'; }
+      push(r, Math.round(s), why);
+    }
+  }
+  out.sort((a, b) => b.score - a.score || a.c.n.length - b.c.n.length);
+  return out.slice(0, limit || 25);
+}
+
+/* Matching a customer read off a photograph uses more than the name, because a
+   similar name alone must never be treated as the same shop. */
+function matchCustomerFromPage(read) {
+  const name = (read.shop || {}).v || '', phone = (read.phone || {}).v || '';
+  const addr = (read.address || {}).v || '', contact = (read.contact || {}).v || '';
+  const ph = String(phone).replace(/\D/g, '').slice(-7);
+  const scored = new Map();
+  const bump = (i, s, why) => {
+    const cur = scored.get(i) || { s: 0, why: [] };
+    cur.s += s; cur.why.push(why); scored.set(i, cur);
+  };
+  if (ph) (CUST_BY_PHONE.get(ph) || []).forEach(i => bump(i, 60, 'phone number matches'));
+  if (name) for (const r of searchCustomers(name, 40)) {
+    if (r.score >= 80) bump(r.i, 45, 'name matches');
+    else if (r.score >= 55) bump(r.i, 26, 'name is close');
+  }
+  const an = norm(addr);
+  if (an.length > 10) for (const [i, v] of scored) {
+    const c = CUST[i];
+    if (c.ad && norm(c.ad).slice(0, 24) === an.slice(0, 24)) bump(i, 18, 'address matches');
+  }
+  const cn = norm(contact).replace(/^(mr|ms|mrs|miss)\s+/, '');
+  if (cn) for (const [i] of scored) {
+    const c = CUST[i];
+    if (c.contact && norm(c.contact).indexOf(cn) >= 0) bump(i, 12, 'contact person matches');
+  }
+  const out = [...scored.entries()]
+    .map(([i, v]) => ({ c: CUST[i], i, score: v.s, why: [...new Set(v.why)].join(', ') }))
+    .filter(r => r.score >= 26)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+  // A single candidate is only treated as certain when something other than the
+  // name agrees — a phone number, an account, or the address.
+  out.forEach(r => { r.certain = /phone|address/.test(r.why); });
+  return out;
+}
+
+/* what this customer has bought before, from this app's own saved orders only */
+function historyFor(name) {
+  const n = norm(name || ''); if (!n) return {};
+  const h = {};
+  for (const id in orders) {
+    const o = orders[id];
+    if (norm((o.customer || {}).name || '') !== n) continue;
+    (o.lines || []).forEach(l => { if (l.sku) h[l.co + '|' + l.sku] = (h[l.co + '|' + l.sku] || 0) + 1; });
+  }
+  return h;
+}
+/* products this shop tends to buy together with the ones already on the order */
+function alsoBought(name, have) {
+  const h = historyFor(name), out = [];
+  for (const k in h) if (!have.has(k)) out.push({ k, n: h[k] });
+  return out.sort((a, b) => b.n - a.n).slice(0, 6).map(x => productByKey(x.k)).filter(Boolean);
+}
+
+;
+/* ============================================================================
+   The order: model, autosave, photographs, reading, review.
+   ========================================================================= */
+
+let ORDER = null;                 // the order being worked on
+let VIEW = { tab: 'new', sub: '', viewer: null, focusLine: null };
+
+const newId = () => 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+function blankOrder() {
+  return {
+    id: newId(), no: null, ver: APP_VER, created: new Date().toISOString(),
+    date: todayISO(), status: 'Draft', mode: '',
+    customer: { name: '', trading: '', contact: '', phone: '', address: '', area: '', custIndex: null, manual: false },
+    notes: '', delivery: '', repNote: '', rep: settings.rep || '',
+    lines: [], pages: [], read: null, custChoices: null, reviewed: null,
+    snapshot: SNAPSHOT, readService: '', readAt: '',
+  };
+}
+
+/* Quiet incremental autosave. Never interrupts typing: it waits for an idle
+   moment and only writes the order that actually changed. */
+let saveTimer = null, savePending = false;
+function touch() {
+  if (!ORDER) return;
+  savePending = true;
+  if (saveTimer) return;
+  const run = () => {
+    saveTimer = null;
+    if (!savePending || !ORDER) return;
+    savePending = false;
+    const clone = { ...ORDER };
+    delete clone.custChoices;                 // recomputed, never worth storing
+    // blob: URLs die with the page context - persisting one leaves a broken
+    // image after any refresh. Pages are re-hydrated from IndexedDB instead.
+    clone.pages = (clone.pages || []).map(pg => { const c = { ...pg }; delete c.thumbUrl; return c; });
+    orders[ORDER.id] = clone;
+    SAVE('orders', orders);
+    SAVE('resume', { id: ORDER.id, tab: VIEW.tab, sub: VIEW.sub, at: Date.now() });
+    flashSaved();
+  };
+  saveTimer = setTimeout(() => (window.requestIdleCallback || setTimeout)(run, { timeout: 400 }), 300);
+}
+function flashSaved() {
+  const el = document.getElementById('savedmark');
+  if (!el) return;
+  el.textContent = 'Saved';
+  el.style.opacity = '1';
+  clearTimeout(flashSaved.t);
+  flashSaved.t = setTimeout(() => { el.style.opacity = '0'; }, 1200);
+}
+
+/* ------------------------------------------------------------ progress --
+   Honest stages, never a fake percentage. */
+const STAGES = [
+  ['improving', 'Improving the photograph'],
+  ['reading', 'Reading the handwriting'],
+  ['matching', 'Matching products'],
+  ['pricing', 'Checking prices'],
+  ['review', 'Preparing the review'],
+];
+let stageNow = '';
+function setStage(s) { stageNow = s; paintStages(); }
+function paintStages() {
+  const el = document.getElementById('stages');
+  if (!el) return;
+  const at = STAGES.findIndex(x => x[0] === stageNow);
+  el.innerHTML = STAGES.map(([k, label], i) =>
+    `<li data-state="${at < 0 ? '' : i < at ? 'done' : i === at ? 'now' : ''}"><span class="dot"></span>${label}</li>`).join('');
+}
+
+/* ------------------------------------------------------- photo capture -- */
+let imgWorker = null, workerJobs = new Map(), workerSeq = 0;
+function worker() {
+  if (imgWorker) return imgWorker;
+  imgWorker = new Worker('imgworker.js');
+  imgWorker.onmessage = e => {
+    const m = e.data;
+    if (m.type === 'stage') { setStage(m.stage); return; }
+    const job = workerJobs.get(m.id);
+    if (!job) return;
+    workerJobs.delete(m.id);
+    m.type === 'error' ? job.rej(new Error(m.message)) : job.res(m);
+  };
+  imgWorker.onerror = () => { imgWorker = null; };
+  return imgWorker;
+}
+function processImage(blob, opts) {
+  return new Promise((res, rej) => {
+    const id = ++workerSeq;
+    workerJobs.set(id, { res, rej });
+    try { worker().postMessage({ id, blob, opts: opts || null }); }
+    catch (e) { workerJobs.delete(id); rej(e); }
+  });
+}
+
+async function addPages(files, replaceIndex) {
+  if (!ORDER) ORDER = blankOrder();
+  ORDER.mode = 'photo';
+  for (const f of files) {
+    // the picture appears immediately; the clean-up happens behind it
+    const page = { id: ORDER.id + ':' + Math.random().toString(36).slice(2, 8),
+                   thumbUrl: URL.createObjectURL(f), state: 'working', turn: 0 };
+    if (replaceIndex != null) { const old = ORDER.pages[replaceIndex]; if (old) idb.del('photos', old.id); ORDER.pages[replaceIndex] = page; }
+    else ORDER.pages.push(page);
+    render(); touch();
+    try {
+      setStage('improving');
+      const r = await processImage(f, null);
+      const dup = ORDER.pages.find(p => p !== page && p.hash && r.hash &&
+        p.hash.split('').filter((ch, i) => ch !== r.hash[i]).length <= 4);
+      await idb.put('photos', page.id, { original: f, clean: r.clean, at: new Date().toISOString(), order: ORDER.id });
+      URL.revokeObjectURL(page.thumbUrl);
+      const tu = URL.createObjectURL(r.thumb);
+      if (typeof LIVE_URLS !== 'undefined') LIVE_URLS.add(tu);
+      Object.assign(page, { state: dup ? 'duplicate' : 'ready', w: r.w, h: r.h,
+        deskew: r.deskew, hash: r.hash, thumbUrl: tu, dupOf: dup ? dup.id : null });
+    } catch (e) {
+      page.state = 'failed'; page.error = String(e.message || e);
+    }
+    setStage(''); render(); touch();
+  }
+}
+async function rotatePage(i) {
+  const p = ORDER.pages[i]; if (!p) return;
+  const rec = await idb.get('photos', p.id); if (!rec) return;
+  p.state = 'working'; p.turn = ((p.turn || 0) + 90) % 360; render();
+  const r = await processImage(rec.original, { rotate: p.turn });
+  await idb.put('photos', p.id, { ...rec, clean: r.clean });
+  URL.revokeObjectURL(p.thumbUrl);
+  const tu2 = URL.createObjectURL(r.thumb);
+  if (typeof LIVE_URLS !== 'undefined') LIVE_URLS.add(tu2);
+  Object.assign(p, { state: 'ready', w: r.w, h: r.h, thumbUrl: tu2 });
+  render(); touch();
+}
+async function dropPage(i) {
+  const p = ORDER.pages[i]; if (!p) return;
+  await idb.del('photos', p.id);
+  if (p.thumbUrl) URL.revokeObjectURL(p.thumbUrl);
+  ORDER.pages.splice(i, 1); render(); touch();
+}
+function movePage(i, d) {
+  const j = i + d;
+  if (j < 0 || j >= ORDER.pages.length) return;
+  const a = ORDER.pages; [a[i], a[j]] = [a[j], a[i]]; render(); touch();
+}
+
+/* ------------------------------------------------------------- reading -- */
+const readerUrl = () => (settings.reader || '').trim() || '/api/read';
+const blobToB64 = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(String(f.result).split(',')[1]); f.readAsDataURL(b); });
+
+let readError = '';
+async function readPages() {
+  const usable = ORDER.pages.filter(p => p.state === 'ready' || p.state === 'duplicate');
+  if (!usable.length) { alert('Take a photograph of the order first.'); return; }
+  readError = ''; ORDER.busy = true; setStage('reading'); render();
+  try {
+    const images = [];
+    for (const p of usable) {
+      const rec = await idb.get('photos', p.id);
+      if (!rec) throw new Error('Page ' + (ORDER.pages.indexOf(p) + 1) + ' is missing from this phone. Photograph it again.');
+      images.push(await blobToB64(rec.clean));
+    }
+    const res = await fetch(readerUrl(), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ images }),
+    });
+    if (!res.ok) throw new Error(
+      res.status === 429 ? 'The reading service is busy. Wait a moment and tap Read the order again — your photograph is saved.'
+      : res.status === 404 ? 'No reading service is set up yet. Open Settings and enter its address. You can build this order by hand in the meantime.'
+      : 'The reading service replied ' + res.status + '. Your photograph is saved; try again, or build the order by hand.');
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    ORDER.readService = data.service || 'reading service';
+    ORDER.readAt = new Date().toISOString();
+    setStage('matching');
+    await applyRead(data);
+    ORDER.busy = false; setStage(''); VIEW.sub = 'review'; render(); touch();
+  } catch (e) {
+    ORDER.busy = false; setStage('');
+    readError = navigator.onLine ? String(e.message || e)
+      : 'No internet. The photograph and everything typed so far are saved on this phone. Tap Read the order again when you have signal — nothing is lost. You can build this order by hand right now.';
+    render(); touch();
+  }
+}
+
+/* Lines appear as they are matched rather than all at the end, so a long order
+   starts filling the review screen straight away. */
+async function applyRead(data) {
+  const cu = data.customer || {};
+  const val = k => (cu[k] || {}).v || '', conf = k => (cu[k] || {}).c || '';
+  ORDER.read = { fields: {}, unreadable: data.unreadable_regions || [] };
+  ['shop', 'trading', 'contact', 'phone', 'address', 'area', 'date', 'rep', 'note']
+    .forEach(k => { ORDER.read.fields[k] = { v: val(k), c: conf(k), box: (cu[k] || {}).box || null }; });
+  ORDER.custChoices = matchCustomerFromPage(ORDER.read.fields);
+
+  const C = ORDER.customer;
+  if (!C.name && val('shop') && conf('shop') !== 'unreadable') C.name = val('shop');
+  if (!C.trading && val('trading')) C.trading = val('trading');
+  if (!C.contact && val('contact')) C.contact = val('contact');
+  if (!C.phone && val('phone')) C.phone = val('phone');
+  if (!C.address && val('address')) C.address = val('address');
+  if (!C.area && val('area')) C.area = val('area');
+  if (val('note')) ORDER.notes = (ORDER.notes ? ORDER.notes + '\n' : '') + val('note');
+  if (val('rep') && !ORDER.rep) ORDER.rep = val('rep');
+
+  const hist = historyFor(C.name);
+  ORDER.lines = [];
+  const raw = data.lines || [];
+  for (let i = 0; i < raw.length; i++) {
+    ORDER.lines.push(makeLine(raw[i], hist));
+    if (i % 4 === 3) { render(); await new Promise(r => setTimeout(r, 0)); }   // keep the screen alive
+  }
+  setStage('pricing'); render();
+  await new Promise(r => setTimeout(r, 0));
+  setStage('review');
+}
+
+function makeLine(l, hist) {
+  const line = {
+    id: 'l' + Math.random().toString(36).slice(2, 8),
+    raw: l.raw || '', text: l.text || '',
+    qty: (typeof l.qty === 'number' && l.qty > 0) ? l.qty : null,
+    unitWritten: l.unit_written || '',
+    unit: UNIT_WORDS[norm(l.unit_written || '')] || 'piece',
+    maybePrice: l.possible_price != null ? l.possible_price : null,
+    pageCompany: (l.company === 'YOL' || l.company === 'MYCO') ? l.company : '',
+    kind: l.kind === 'assortment' ? 'assortment' : 'item',
+    ditto: !!l.ditto, grouped: !!l.grouped, readConf: l.c || 'unsure',
+    page: l.page != null ? l.page : 0, box: l.box || null,
+    sku: null, co: '', name: '', priceC: 0, priceSrc: 'none', discC: 0,
+    blank: false, custom: false, cands: [],
+  };
+  // Readers sometimes leave the quantity inside the text. Pull an obvious
+  // leading "6 -" or trailing "- 6" into qty when qty is missing, so the words
+  // that reach the matcher are the product words alone.
+  let m;
+  if (line.qty == null && (m = line.text.match(/^\s*(\d{1,3})\s*[-\u2013.]?\s+(.{3,})$/)))
+    { line.qty = +m[1]; line.text = m[2]; }
+  else if (line.qty == null && (m = line.text.match(/^(.{3,}?)\s*[-\u2013]\s*(\d{1,3})\s*(ps|pcs)?\s*$/i)))
+    { line.qty = +m[2]; line.text = m[1]; }
+  else if (line.qty != null && (m = line.text.match(/^\s*(\d{1,3})\s*[-\u2013.]?\s+(.{3,})$/)) && +m[1] === line.qty)
+    line.text = m[2];
+  line.cands = searchProducts(line.text, { history: hist, limit: 3 });
+  line.state = tierFor(line);
+  if (line.state === 'OK') applyProduct(line, line.cands[0].key, true);
+  return line;
+}
+
+/* Choosing a product fills in the Lightspeed name, company, barcode and price.
+   The price is labelled by where it came from and never guessed. */
+function applyProduct(line, key, silent) {
+  const p = productByKey(key);
+  if (!p) return;
+  line.sku = p.sku; line.co = p.co; line.name = p.n; line.custom = false;
+  if (p.price > 0) {
+    const useCase = (line.unit === 'case' || line.unit === 'carton') && p.cp > 0;
+    line.priceC = Math.round((useCase ? p.cp : p.price) * 100);
+    line.priceSrc = 'lightspeed';
+  } else { line.priceC = 0; line.priceSrc = 'none'; }
+  if ((line.unit === 'case' || line.unit === 'carton') && !p.cp) line.unit = 'piece';
+  line.state = companyProblem(line) ? 'COMPANY' : tierFor(line);
+  if (!silent) {
+    const k = keyToks(line.text).join(' ');
+    if (k) { fixes[k] = { sku: p.sku, co: p.co, n: p.n, at: todayISO(), rep: ORDER.rep || settings.rep || '' }; SAVE('fixes', fixes); }
+    const rk = p.co + '|' + p.sku;
+    const at = recents.indexOf(rk); if (at >= 0) recents.splice(at, 1);
+    recents.unshift(rk); if (recents.length > 40) recents.length = 40; SAVE('recents', recents);
+  }
+}
+
+const lineTotal = l => l.blank ? 0 : Math.max(0, (l.qty || 0) * l.priceC - (l.discC || 0));
+function totals() {
+  const t = { YOL: 0, MYCO: 0, other: 0, units: 0, disc: 0 };
+  for (const l of ORDER.lines) {
+    if (l.blank) continue;
+    const v = lineTotal(l);
+    if (l.co === 'YOL') t.YOL += v; else if (l.co === 'MYCO') t.MYCO += v; else t.other += v;
+    t.units += l.qty || 0; t.disc += l.discC || 0;
+  }
+  t.all = t.YOL + t.MYCO + t.other;
+  return t;
+}
+function lineReady(l) {
+  if (l.blank) return true;
+  if (!(l.qty > 0)) return false;
+  if (!l.sku && !l.custom) return false;
+  if (companyProblem(l)) return false;
+  return true;
+}
+function reviewCounts() {
+  const L = ORDER.lines || [];
+  return {
+    n: L.length,
+    red: L.filter(l => !l.blank && (l.state === 'UNREAD' || l.state === 'NOTFOUND' || companyProblem(l) || !(l.qty > 0))).length,
+    amber: L.filter(l => !l.blank && (l.state === 'REVIEW' || l.state === 'ASSORT' || l.ditto || l.readConf === 'unsure')).length,
+    open: L.filter(l => !lineReady(l)).length,
+    blank: L.filter(l => l.blank).length,
+    noPrice: L.filter(l => !l.blank && !(l.priceC > 0)).length,
+  };
+}
+
+/* ------------------------------------------------- duplicate protection -- */
+function duplicateWarning() {
+  const mine = ORDER.lines.filter(l => !l.blank && l.sku);
+  const sig = mine.map(l => l.co + l.sku + 'x' + l.qty).sort().join(',');
+  const units = mine.reduce((a, l) => a + (l.qty || 0), 0);
+  const myHashes = ORDER.pages.map(p => p.hash).filter(Boolean);
+  for (const id in orders) {
+    const o = orders[id];
+    if (o.id === ORDER.id || !(o.lines || []).length) continue;
+    if (norm((o.customer || {}).name || '') !== norm(ORDER.customer.name || '')) continue;
+    const days = Math.abs((new Date(o.date) - new Date(ORDER.date)) / 86400000);
+    if (!(days <= 14)) continue;
+    const theirs = o.lines.filter(l => !l.blank && l.sku).map(l => l.co + l.sku + 'x' + l.qty).sort().join(',');
+    const theirUnits = o.lines.reduce((a, l) => a + (l.qty || 0), 0);
+    const samePhoto = (o.pages || []).some(p => p.hash && myHashes.some(h =>
+      h.split('').filter((ch, i) => ch !== p.hash[i]).length <= 4));
+    if (theirs === sig || samePhoto || (mine.length === o.lines.length && Math.abs(theirUnits - units) <= 1))
+      return (o.no ? 'Order ' + o.no : 'A draft') + ' for ' + (o.customer.name || 'this shop') + ' dated ' + o.date +
+        ' has ' + (samePhoto ? 'the same photograph' : theirs === sig ? 'exactly the same products and quantities'
+          : 'the same number of products and almost the same units') + '.';
+  }
+  return '';
+}
+
+function nextOrderNo() {
+  if (ORDER.no) return ORDER.no;
+  const seq = (LS('seq', 0) | 0) + 1;
+  SAVE('seq', seq);
+  ORDER.no = String(seq).padStart(4, '0');
+  touch();
+  return ORDER.no;
+}
+
+;
+/* ============================================================================
+   PDF. Hand-rolled PDF 1.4, Helvetica, integer cents — no library, no network.
+   The document is a printed commercial order, not a tax invoice.
+   ========================================================================= */
+
+const A4 = [595.28, 841.89], LETTER = [612, 792];
+const COMPANY = {
+  YOL:  { name: 'YUSUF OVERSEAS LTD',
+          addr: '#77 Naparima Mayaro Road, Craignish Village, Princes Town',
+          contact: 'Call +18682258229   -   info@yusufoverseas.com' },
+  MYCO: { name: 'MYCO GLOBAL DISTRIBUTORS LTD',
+          addr: 'Corner Olive Drive & 166B Caroni Savannah Road, Charlieville',
+          contact: 'Call +18682310788   -   WhatsApp +18683079376' },
+};
+
+const ascii = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[×✕]/g, 'x').replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
+  .replace(/[—–]/g, '-').replace(/[^\x20-\x7E]/g, '?');
+const pesc = s => ascii(s).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+
+/* Helvetica is not fixed width. Capitals are far wider than a flat guess, and a
+   flat guess pushes right-aligned headings off the page. Estimate per class. */
+function tw(s, size, bold) {
+  s = ascii(s); let w = 0;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    w += c === 32 ? 0.278
+      : (c >= 65 && c <= 90) ? (bold ? 0.74 : 0.70)
+      : (c >= 48 && c <= 57) ? 0.556
+      : (c >= 97 && c <= 122) ? (bold ? 0.55 : 0.52) : 0.33;
+  }
+  return w * size;
+}
+function wrap(s, size, width) {
+  s = ascii(s); const out = []; let cur = '';
+  for (const word of s.split(' ')) {
+    const t = cur ? cur + ' ' + word : word;
+    if (tw(t, size) <= width) cur = t; else { if (cur) out.push(cur); cur = word; }
+  }
+  if (cur) out.push(cur);
+  return out.length ? out : [''];
+}
+const T = (x, y, size, txt, bold) =>
+  `BT /${bold ? 'F2' : 'F1'} ${size} Tf 1 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)} Tm (${pesc(txt)}) Tj ET\n`;
+const L = (x1, y1, x2, y2, w) => `${w || 0.7} w ${x1.toFixed(1)} ${y1.toFixed(1)} m ${x2.toFixed(1)} ${y2.toFixed(1)} l S\n`;
+
+function buildPdf(pages, size) {
+  const objs = [], add = s => (objs.push(s), objs.length);
+  const fR = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  const fB = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+  const cIds = pages.map(ops => add('STREAM:' + ops));
+  const pIds = cIds.map(cid => add(`<< /Type /Page /Parent PAGES 0 R /MediaBox [0 0 ${size[0]} ${size[1]}] /Resources << /Font << /F1 ${fR} 0 R /F2 ${fB} 0 R >> >> /Contents ${cid} 0 R >>`));
+  const pagesId = add(`<< /Type /Pages /Kids [${pIds.map(i => i + ' 0 R').join(' ')}] /Count ${pIds.length} >>`);
+  const catId = add(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+  let out = '%PDF-1.4\n'; const offs = [0];
+  objs.forEach((o, i) => {
+    offs.push(out.length);
+    if (o.startsWith('STREAM:')) {
+      const s = o.slice(7);
+      out += `${i + 1} 0 obj\n<< /Length ${s.length} >>\nstream\n${s}\nendstream\nendobj\n`;
+    } else out += `${i + 1} 0 obj\n${o.replace('PAGES', String(pagesId))}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
+  for (let i = 1; i <= objs.length; i++) out += String(offs[i]).padStart(10, '0') + ' 00000 n \n';
+  out += `trailer\n<< /Size ${objs.length + 1} /Root ${catId} 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return out;
+}
+
+function orderPdf(which, paper) {
+  const size = paper === 'letter' ? LETTER : A4;
+  const W = size[0], H = size[1], M = 42, usable = W - 2 * M;
+  const cols = [
+    { w: 22, h: '#' }, { w: usable * 0.34, h: 'Product' }, { w: usable * 0.155, h: 'Barcode' },
+    { w: 46, h: 'Unit' }, { w: 32, h: 'Qty' }, { w: 58, h: 'Unit Price' }, { w: 48, h: 'Discount' }, { w: 0, h: 'Amount' },
+  ];
+  cols[7].w = usable - cols.slice(0, 7).reduce((a, c) => a + c.w, 0);
+  const colX = []; let cx = M; for (const c of cols) { colX.push(cx); cx += c.w; }
+
+  // The heading names only the companies that are actually on the order.
+  const present = ['YOL', 'MYCO'].filter(co => ORDER.lines.some(l => !l.blank && l.co === co && l.qty > 0));
+  const sections = which === 'BOTH' ? (present.length ? present : ['YOL']) : [which];
+  const single = which !== 'BOTH' ? which : (sections.length === 1 ? sections[0] : null);
+  const head = single ? COMPANY[single]
+    : { name: COMPANY.YOL.name + ' + ' + COMPANY.MYCO.name, addr: COMPANY.YOL.addr, contact: COMPANY.YOL.contact };
+  const title = 'SALES ORDER';
+  const T0 = totals();
+  const C = ORDER.customer;
+  const no = nextOrderNo();
+
+  const items = []; let idx = 0;
+  for (const co of sections) {
+    const ls = ORDER.lines.filter(l => !l.blank && l.co === co && l.qty > 0);
+    if (!ls.length) continue;
+    if (which === 'BOTH' && !single) items.push({ section: COMPANY[co].name, brk: items.length > 0, co });
+    for (const l of ls) { idx++; items.push({ l, i: idx }); }
+    if (which === 'BOTH' && !single) items.push({ subtotal: co });
+  }
+  const custom = ORDER.lines.filter(l => !l.blank && l.custom && sections.indexOf(l.co) >= 0);
+
+  const pages = []; let ops = '', y = 0, pageNo = 0;
+  const footH = 66;
+
+  const tableHead = () => {
+    ops += `0.93 0.93 0.91 rg ${M} ${(y - 14).toFixed(1)} ${usable.toFixed(1)} 15 re f 0 0 0 rg\n`;
+    cols.forEach((c, i) => { ops += T(colX[i] + 2, y - 11, 7.5, c.h, true); });
+    y -= 26;
+  };
+  const newPage = () => {
+    if (ops) pages.push(ops);
+    ops = ''; pageNo++; y = H - M;
+    if (pageNo === 1) {
+      ops += T(M, y - 6, 12.5, head.name.slice(0, 60), true);
+      let ts = 15; while (ts > 8 && tw(title, ts, true) > usable * 0.45) ts -= 0.5;
+      ops += T(W - M - tw(title, ts, true), y - 24, ts, title, true);
+      ops += T(M, y - 24, 9, head.addr);
+      ops += T(M, y - 38, 8.5, head.contact);
+      ops += T(M, y - 60, 9, 'Order no: ' + no + '        Date: ' + ORDER.date);
+      const rep = ORDER.rep || settings.rep || '';
+      if (rep) ops += T(W - M - tw('Representative: ' + rep, 8.5), y - 60, 8.5, 'Representative: ' + rep);
+      ops += L(M, y - 72, W - M, y - 72);
+      ops += T(M, y - 90, 9.5, 'Customer: ' + (C.name || '-'), true);
+      let cy = y - 105;
+      const tn = (C.trading || '').trim();
+      if (tn && norm(tn) !== norm(C.name)) { ops += T(M, cy, 9, 'Trading as: ' + tn); cy -= 13; }
+      if (C.contact) { ops += T(M, cy, 9, 'Contact: ' + C.contact); cy -= 13; }
+      if (telFmt(C.phone)) { ops += T(M, cy, 9, 'Telephone: ' + telFmt(C.phone)); cy -= 13; }
+      if (C.address) wrap('Address: ' + C.address, 9, usable * 0.7).forEach(ln => { ops += T(M, cy, 9, ln); cy -= 12; });
+      if (C.area && (C.address || '').indexOf(C.area) < 0) { ops += T(M, cy, 9, 'Area: ' + C.area); cy -= 13; }
+      y = cy - 14;
+    } else {
+      ops += T(M, y - 6, 9, head.name.slice(0, 52) + ' - ' + title + ' ' + no + ' (continued)', true);
+      y -= 22;
+    }
+    tableHead();
+  };
+  newPage();
+
+  for (const it of items) {
+    if (it.section) { if (it.brk || y - 26 < M + footH) newPage(); ops += T(M, y - 10, 10, it.section, true); y -= 21; continue; }
+    if (it.subtotal) {
+      if (y - 20 < M + footH) newPage();
+      ops += T(colX[5], y - 10, 9, 'Subtotal:', true);
+      const v = money(T0[it.subtotal]);
+      ops += T(colX[7] + cols[7].w - tw(v, 9, true), y - 10, 9, v, true);
+      y -= 23; continue;
+    }
+    const l = it.l;
+    const nameLines = wrap(l.name || l.text, 8.5, cols[1].w - 4);
+    const rowH = Math.max(nameLines.length, 1) * 10.5 + 7;
+    if (y - rowH < M + footH) newPage();
+    ops += T(colX[0] + 2, y - 9, 8.5, String(it.i));
+    nameLines.forEach((ln, j) => { ops += T(colX[1] + 2, y - 9 - j * 10, 8.5, ln); });
+    ops += T(colX[2] + 2, y - 9, 8, l.custom ? '-' : l.sku);
+    ops += T(colX[3] + 2, y - 9, 8, UNIT_LABEL[l.unit] || 'Pieces');
+    ops += T(colX[4] + 2, y - 9, 8.5, String(l.qty));
+    const up = l.priceC > 0 ? money(l.priceC) : 'PRICE NEEDED';
+    ops += T(colX[5] + cols[5].w - tw(up, 8.5) - 2, y - 9, 8.5, up);
+    const dc = l.discC ? money(l.discC) : '-';
+    ops += T(colX[6] + cols[6].w - tw(dc, 8.5) - 2, y - 9, 8.5, dc);
+    const amt = money(lineTotal(l));
+    ops += T(colX[7] + cols[7].w - tw(amt, 8.5) - 2, y - 9, 8.5, amt);
+    y -= rowH;
+  }
+
+  const mine = ORDER.lines.filter(l => !l.blank && l.qty > 0 && (which === 'BOTH' || l.co === which));
+  const totC = which === 'BOTH' ? T0.all : T0[which] || 0;
+  const discC = mine.reduce((a, l) => a + (l.discC || 0), 0);
+  const noteBits = [];
+  if (ORDER.notes) noteBits.push('Notes: ' + ORDER.notes.replace(/\n/g, ' | '));
+  if (ORDER.delivery) noteBits.push('Delivery: ' + ORDER.delivery);
+  if (ORDER.repNote) noteBits.push('For the office: ' + ORDER.repNote);
+  if (custom.length) noteBits.push('Products not in the catalogue: ' + custom.map(l => l.name).join(' | '));
+
+  const blockH = 96 + noteBits.length * 22 + 74;
+  if (y - blockH < M + 24) newPage();
+  ops += L(M, y - 4, W - M, y - 4);
+  ops += T(M, y - 18, 9, mine.length + ' different products - ' + mine.reduce((a, l) => a + l.qty, 0) + ' units');
+  ops += T(colX[5], y - 18, 9, 'Subtotal: ' + money(totC + discC));
+  if (discC) ops += T(colX[5], y - 30, 9, 'Discount: ' + money(discC));
+  ops += T(colX[5], y - 46, 11, 'TOTAL:', true);
+  const tot = money(totC) + ' TTD';
+  ops += T(colX[7] + cols[7].w - tw(tot, 11, true), y - 46, 11, tot, true);
+
+  let fy = y - 68;
+  noteBits.forEach(nb => wrap(nb, 8.5, usable).forEach(ln => { ops += T(M, fy, 8.5, ln); fy -= 11; }));
+  fy -= 12;
+  ops += T(M, fy, 7.5, 'Sales order - stock, price and delivery are subject to final office confirmation. This is not a tax invoice.');
+  ops += T(M, fy - 10, 7, 'Prices and stock from the Lightspeed catalogue snapshot of ' + ORDER.snapshot + '.');
+  if (ORDER.readService)
+    ops += T(M, fy - 19, 7, 'Read from a photograph by ' + ORDER.readService + ' on ' + (ORDER.readAt || '').slice(0, 10) + ', then checked line by line by the representative.');
+
+  let sy = fy - 42;
+  if (sy < M + 58) { pages.push(ops); ops = ''; pageNo++; y = H - M; sy = y - 40; }
+  const half = (usable - 26) / 2;
+  ops += L(M, sy, M + half, sy);
+  ops += L(M + half + 26, sy, W - M, sy);
+  ops += T(M, sy - 11, 8, 'Customer name and signature', true);
+  ops += T(M + half + 26, sy - 11, 8, 'Representative signature', true);
+  ops += T(M, sy - 23, 7.5, 'I confirm the products and quantities above.');
+  if (ORDER.rep || settings.rep) ops += T(M + half + 26, sy - 23, 7.5, ORDER.rep || settings.rep);
+  ops += T(M, sy - 35, 7.5, 'Date: ......................');
+  ops += T(M + half + 26, sy - 35, 7.5, 'Date: ' + ORDER.date);
+  pages.push(ops);
+
+  const numbered = pages.map((p, i) => p + T(W - M - tw('Page ' + (i + 1) + ' of ' + pages.length, 8), M - 18, 8, 'Page ' + (i + 1) + ' of ' + pages.length));
+  return buildPdf(numbered, size);
+}
+
+const pdfName = which => {
+  const shop = (ORDER.customer.name || 'Customer').toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 42);
+  const tag = which === 'BOTH' ? 'ORDER' : which + '-ORDER';
+  return `${shop}_${tag}_${ORDER.date}_${nextOrderNo()}.pdf`;
+};
+function pdfBlob(which, paper) {
+  const doc = orderPdf(which, paper);
+  const bytes = new Uint8Array(doc.length);
+  for (let i = 0; i < doc.length; i++) bytes[i] = doc.charCodeAt(i) & 0xff;
+  return new Blob([bytes], { type: 'application/pdf' });
+}
+async function savePdf(which, paper) {
+  const blob = pdfBlob(which, paper), name = pdfName(which);
+  await idb.put('pdfs', ORDER.id + ':' + which, { blob, name, at: new Date().toISOString() });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  if (ORDER.status === 'Draft') { ORDER.status = 'Ready to send'; touch(); }
+  return name;
+}
+
+;
+/* ============================================================================
+   Screens: New Order, photograph, review, manual.
+   ========================================================================= */
+
+const pageUrl = i => (ORDER.pages[i] || {}).thumbUrl || '';
+
+/* Show the exact strip of the photograph a line was read from. The thumbnail is
+   scaled so the reader's box fills the strip, which is why tapping a line shows
+   the writing it came from rather than the whole page. */
+function cropStyle(box, pageIdx, stripW, stripH) {
+  const p = ORDER.pages[pageIdx || 0];
+  if (!p || !box || !p.w) return null;
+  const [x0, y0, x1, y1] = box;
+  const bw = Math.max(0.02, x1 - x0), bh = Math.max(0.012, y1 - y0);
+  const scale = Math.min(stripW / (bw * p.w), stripH / (bh * p.h)) * (p.w / p.w);
+  const k = Math.max(scale, stripW / (bw * p.w));
+  return `width:${(p.w * k).toFixed(1)}px;height:auto;transform:translate(${(-x0 * p.w * k).toFixed(1)}px,${(-y0 * p.h * k).toFixed(1)}px)`;
+}
+function cropHTML(line, idx) {
+  if (!line.box || !ORDER.pages.length) return '';
+  const st = cropStyle(line.box, line.page, 320, 56);
+  if (!st) return '';
+  return `<button class="crop" data-zoom="${line.page}" data-box="${esc(JSON.stringify(line.box))}"
+    aria-label="Show this line on the photograph">
+    <img src="${pageUrl(line.page)}" style="${st}" alt=""></button>`;
+}
+
+/* ------------------------------------------------------------ New Order -- */
+function vNewOrder() {
+  const drafts = Object.values(orders).filter(o => o.status === 'Draft' && (o.lines.length || o.pages.length))
+    .sort((a, b) => (b.created || '').localeCompare(a.created || ''));
+  const recent = Object.values(orders).filter(o => o.status !== 'Draft')
+    .sort((a, b) => (b.created || '').localeCompare(a.created || '')).slice(0, 4);
+  return `
+  <div class="screen">
+    <button class="choice accent" data-act="startPhoto">
+      ${ico('camera')}
+      <span class="ttl">Photograph order</span>
+      <span class="sub">Take a picture of the written page. It is cleaned up, read, matched to the catalogue and shown to you to check before anything is used.</span>
+    </button>
+    <div style="height:var(--s3)"></div>
+    <button class="choice" data-act="startManual">
+      ${ico('pen')}
+      <span class="ttl">Create manually</span>
+      <span class="sub">Search the catalogue and build the order yourself. Works with no internet.</span>
+    </button>
+
+    ${drafts.length ? `<div class="card" style="margin-top:var(--s5)">
+      <div class="eyebrow">Unfinished</div>
+      <ul class="list">${drafts.slice(0, 3).map(o => `<li><button class="row" data-open="${o.id}">
+        <span class="grow"><span class="nm">${esc(o.customer.name || 'Untitled order')}</span>
+        <span class="sub">${esc(o.date)} · ${o.lines.length} line${o.lines.length === 1 ? '' : 's'}${o.pages.length ? ' · ' + o.pages.length + ' page' + (o.pages.length === 1 ? '' : 's') : ''}</span></span>
+        ${ico('back', 'flip')}</button></li>`).join('')}</ul>
+    </div>` : ''}
+
+    ${recent.length ? `<div class="card">
+      <div class="eyebrow">Recent orders</div>
+      <ul class="list">${recent.map(o => `<li><button class="row" data-open="${o.id}">
+        <span class="grow"><span class="nm">${esc(o.customer.name || 'Untitled')}</span>
+        <span class="sub">${o.no ? 'Order ' + o.no + ' · ' : ''}${esc(o.date)} · ${money(orderTotal(o))}</span></span>
+        <span class="tag plain">${esc(o.status)}</span></button></li>`).join('')}</ul>
+      <button class="btn quiet wide sm" data-act="goOrders" style="margin-top:var(--s3)">Search previous orders</button>
+    </div>` : ''}
+  </div>`;
+}
+const orderTotal = o => (o.lines || []).reduce((a, l) => a + (l.blank ? 0 : Math.max(0, (l.qty || 0) * (l.priceC || 0) - (l.discC || 0))), 0);
+
+/* ---------------------------------------------------------- photograph -- */
+function vPhoto() {
+  const P = ORDER.pages;
+  const busy = ORDER.busy || P.some(p => p.state === 'working');
+  const usable = P.filter(p => p.state === 'ready' || p.state === 'duplicate').length;
+  return `
+  <div class="screen">
+    <input id="cam" type="file" accept="image/*" capture="environment" multiple hidden>
+    <input id="lib" type="file" accept="image/*" multiple hidden>
+    <div class="btn-row">
+      <button class="btn accent" data-act="shoot" style="flex:2 1 200px">${ico('camera')} ${P.length ? 'Add a page' : 'Take the picture'}</button>
+      <button class="btn quiet" data-act="pick">Choose a photo</button>
+    </div>
+
+    ${P.length ? `<div class="card" style="margin-top:var(--s4)">
+      <div class="eyebrow">Pages — ${P.length}</div>
+      <ul class="list">${P.map((p, i) => `<li class="row" style="align-items:flex-start">
+        <button class="crop" style="width:64px;height:84px;flex:0 0 64px;margin:0" data-zoom="${i}" aria-label="Open page ${i + 1}">
+          ${p.thumbUrl ? `<img src="${p.thumbUrl}" style="width:64px;height:auto" alt="">` : ''}</button>
+        <span class="grow">
+          <span class="nm">Page ${i + 1}</span>
+          <span class="sub">${p.state === 'working' ? 'Cleaning up…'
+            : p.state === 'failed' ? '<span style="color:var(--brick-2)">Could not prepare — take it again</span>'
+            : p.state === 'duplicate' ? '<span style="color:var(--tang-2)">Looks like a page already added</span>'
+            : `Ready${p.deskew ? ' · straightened ' + p.deskew + '°' : ''}`}</span>
+          <span class="btn-row" style="margin-top:var(--s2)">
+            <button class="btn quiet sm" data-rot="${i}">${ico('rotate')} Rotate</button>
+            <button class="btn quiet sm" data-retake="${i}">Retake</button>
+            <button class="btn quiet sm" data-up="${i}" ${i === 0 ? 'disabled' : ''}>Up</button>
+            <button class="btn quiet sm" data-down="${i}" ${i === P.length - 1 ? 'disabled' : ''}>Down</button>
+            <button class="btn quiet sm" data-drop="${i}">${ico('trash')}</button>
+          </span>
+        </span></li>`).join('')}</ul>
+    </div>` : `<p class="hint" style="margin-top:var(--s4)">Hold the page flat and fill the frame. Several pages are fine — take them in order.</p>`}
+
+    ${busy ? `<div class="card"><div class="eyebrow">Working</div><ul class="stages" id="stages"></ul></div>` : ''}
+    ${readError ? `<div class="card" style="border-color:var(--brick)">
+      <div class="tag bad">${ico('alert')} Could not read</div>
+      <p style="margin-top:var(--s2)">${esc(readError)}</p>
+      <div class="btn-row"><button class="btn quiet" data-act="goSettings">Open settings</button>
+      <button class="btn quiet" data-act="startManual">Build it by hand</button></div></div>` : ''}
+
+    ${usable && !busy ? `<button class="btn primary wide" data-act="read" style="margin-top:var(--s4)">Read the order</button>` : ''}
+    <p class="hint">The photograph stays in this app on this phone. It is sent once to the reading service to be read, and never goes into the published app files.</p>
+  </div>`;
+}
+
+/* -------------------------------------------------------------- review -- */
+function vReview() {
+  const C = reviewCounts(), R = ORDER.read;
+  const wide = window.innerWidth >= 900;
+  const photo = ORDER.pages.length ? `<div class="card ${wide ? 'sticky' : ''}">
+      <div class="eyebrow">The photograph</div>
+      ${ORDER.pages.map((p, i) => `<button class="crop" style="height:${wide ? 420 : 150}px;width:100%" data-zoom="${i}" aria-label="Open page ${i + 1} full size">
+        ${p.thumbUrl ? `<img src="${p.thumbUrl}" style="width:100%;height:auto" alt="Page ${i + 1}">` : ''}</button>`).join('')}
+      <p class="hint">Tap to open it full size. Tap the strip above any line to see the writing it came from.</p>
+    </div>` : '';
+
+  const custCard = R ? `<div class="card">
+    <div class="eyebrow">What the photograph says</div>
+    ${['shop', 'trading', 'contact', 'phone', 'address', 'area', 'date', 'rep', 'note']
+      .filter(k => (R.fields[k] || {}).v)
+      .map(k => {
+        const f = R.fields[k];
+        const label = { shop: 'Shop name', trading: 'Trading as', contact: 'Contact person', phone: 'Telephone',
+                        address: 'Address', area: 'Area or town', date: 'Date', rep: 'Representative', note: 'Note' }[k];
+        return `<div class="row" data-zoom="${f.page || 0}" data-box="${esc(JSON.stringify(f.box || null))}">
+          <span class="grow"><span class="sub">${label}</span><span class="nm">${esc(f.v)}</span></span>
+          ${f.c === 'unreadable' ? `<span class="tag bad">${ico('alert')} Could not read</span>`
+            : f.c === 'unsure' ? `<span class="tag review">Check this</span>`
+            : `<span class="tag ok">${ico('check')} Clear</span>`}</div>`;
+      }).join('')}
+    ${(R.unreadable || []).length ? `<p class="hint" style="color:var(--brick-2)">Could not read on the page: ${esc(R.unreadable.join('; '))}</p>` : ''}
+    ${customerChoiceHTML()}
+  </div>` : '';
+
+  const lines = `<div class="card">
+    <div class="eyebrow">Every line as written — ${C.n}</div>
+    <p class="hint" style="margin-bottom:var(--s3)">Burnt orange means check it. Brick red must be corrected, or deliberately left blank, before a PDF can be made.</p>
+    ${ORDER.lines.map((l, i) => lineHTML(l, i)).join('') || '<p class="hint">Nothing was read from the photograph.</p>'}
+  </div>
+  <div class="card">
+    <div class="row" style="border:0"><span class="grow"><span class="nm num">${C.n} lines · ${C.red} to correct · ${C.amber} to check · ${C.blank} left blank</span></span></div>
+    <button class="btn primary wide" data-act="acceptReview" ${C.open ? 'disabled' : ''}>
+      ${C.open ? C.open + ' line' + (C.open === 1 ? '' : 's') + ' still need you' : 'Accept these lines'}</button>
+  </div>`;
+
+  return `<div class="screen">${wide ? `<div class="split"><div>${photo}${custCard}</div><div>${lines}</div></div>`
+    : photo + custCard + lines}</div>`;
+}
+
+function customerChoiceHTML() {
+  const ch = ORDER.custChoices;
+  const cur = ORDER.customer.custIndex != null ? CUST[ORDER.customer.custIndex] : null;
+  if (cur) return `<div class="row" style="border:0"><span class="grow">
+    <span class="sub">Customer chosen</span><span class="nm">${esc(cur.n)}</span>
+    <span class="sub">${esc(cur.ad || cur.t || '')}</span></span>
+    <button class="btn quiet sm" data-act="clearCust">Change</button></div>`;
+  if (!ch || !ch.length) return ORDER.read && ORDER.read.fields.shop.v
+    ? `<p class="hint">No customer on file matches that name.</p>
+       <button class="btn quiet wide sm" data-act="manualCust">Use this as a new customer for this order</button>` : '';
+  return `<div class="eyebrow" style="margin-top:var(--s4)">${ch.length > 1 ? 'Several customers could be this one' : 'Is this the customer?'}</div>
+    <p class="hint">Never chosen for you on a similar name alone.</p>
+    <ul class="list">${ch.map(r => `<li><button class="row" data-cust="${r.i}">
+      <span class="grow"><span class="nm">${esc(r.c.n)}</span>
+      <span class="sub">${esc(r.c.ad || r.c.t || '')}${r.c.p ? ' · ' + telFmt(r.c.p) : ''}</span>
+      <span class="sub">${esc(r.why)}${r.certain ? '' : ' — name only, check before choosing'}</span></span>
+      <span class="tag ${r.certain ? 'ok' : 'review'}">${r.certain ? 'Confirmed by phone or address' : 'Name only'}</span>
+      </button></li>`).join('')}</ul>
+    <button class="btn quiet wide sm" data-act="manualCust">None of these — new customer for this order</button>`;
+}
+
+function lineHTML(l, i) {
+  const clash = companyProblem(l), noQty = !l.blank && !(l.qty > 0);
+  const red = !l.blank && (l.state === 'UNREAD' || l.state === 'NOTFOUND' || clash || noQty);
+  const amber = !l.blank && !red && (l.state === 'REVIEW' || l.state === 'ASSORT' || l.ditto || l.readConf === 'unsure');
+  const cls = l.blank ? 'blank' : red ? 'bad' : amber ? 'review' : 'ok';
+  const stateLabel = clash ? STATE.COMPANY : noQty && l.state !== 'UNREAD' ? 'QUANTITY UNCLEAR' : STATE[l.state] || '';
+  const p = l.sku ? productOf(l) : null;
+  return `<div class="line ${cls}" data-line="${l.id}">
+    <div class="line-head">
+      <span class="idx">${i + 1}</span>
+      <span class="tag ${l.blank ? 'plain' : red ? 'bad' : amber ? 'review' : 'ok'}">
+        ${red ? ico('alert') : amber ? '' : l.blank ? '' : ico('check')} ${esc(stateLabel)}</span>
+      ${l.ditto ? '<span class="tag review">Ditto — taken from the line above</span>' : ''}
+      ${l.grouped ? '<span class="tag review">Shared quantity</span>' : ''}
+      ${l.readConf === 'unsure' && l.state !== 'UNREAD' ? '<span class="tag review">Handwriting unsure</span>' : ''}
+      ${l.blank ? '<span class="tag plain">Left blank by you</span>' : ''}
+      <button class="btn quiet sm" style="margin-left:auto;min-height:36px" data-dropline="${l.id}" aria-label="Remove line ${i + 1}">${ico('x')}</button>
+    </div>
+    ${cropHTML(l, i)}
+    ${l.raw ? `<p class="hint" style="margin:0 0 var(--s2)">As written: <i>${esc(l.raw)}</i></p>` : ''}
+    ${l.maybePrice != null ? `<p class="hint" style="color:var(--brick-2)">A number here may be a price, not a quantity: ${esc(String(l.maybePrice))}. Nothing was assumed.</p>` : ''}
+    <label class="field"><span class="sr">What the line says</span>
+      <input value="${esc(l.text)}" data-text="${l.id}" placeholder="What the line says"></label>
+    <div class="qty-row">
+      <div class="stepper">
+        <button data-qty="${l.id}" data-d="-1" aria-label="One fewer">−</button>
+        <input class="num" type="number" inputmode="numeric" min="1" value="${l.qty != null ? l.qty : ''}" placeholder="?" data-setqty="${l.id}" aria-label="Quantity">
+        <button data-qty="${l.id}" data-d="1" aria-label="One more">+</button>
+      </div>
+      <select data-unit="${l.id}" aria-label="Unit" style="flex:1 1 130px;min-width:120px">
+        ${['piece', 'pack', 'case', 'carton'].map(u => `<option value="${u}"${l.unit === u ? ' selected' : ''}>${UNIT_LABEL[u]}</option>`).join('')}
+      </select>
+      ${l.unitWritten ? `<span class="hint">written “${esc(l.unitWritten)}”</span>` : ''}
+      ${l.pageCompany ? `<span class="tag plain">${l.pageCompany} written on the page</span>` : ''}
+    </div>
+    ${priceHTML(l)}
+    ${clash ? `<p class="hint" style="color:var(--brick-2)">The page says ${esc(l.pageCompany || 'a MYCO brand')} but the product chosen belongs to ${esc(p ? p.co : '')}. Dr. Herbician, VI John, Floraura and TAILS &amp; TREAT are MYCO Global Distributors and never go under Yusuf Overseas.</p>` : ''}
+    ${l.state === 'ASSORT' ? `<p class="hint" style="color:var(--tang-2)">A mixed or assorted case, not one product. Choose the products yourself, or leave it blank and it goes on the order as a note for the office.</p>` : ''}
+    <div class="cands">${(l.cands || []).map(c => `<button class="cand" data-pick="${l.id}" data-key="${c.key}" aria-pressed="${l.sku === c.p.sku && l.co === c.p.co}">
+      <span class="nm">${esc(c.p.n)}</span>
+      <span class="sub">${c.p.co} · ${esc(c.p.sku)} · ${c.p.price > 0 ? money(Math.round(c.p.price * 100)) : 'price needed'}${c.p.cp ? ' · case of ' + c.p.cs + ' ' + money(Math.round(c.p.cp * 100)) : ''}</span>
+      <span class="sub">${c.learned ? 'Remembered from your last correction — still confirm it' : c.score + '% · ' + esc(c.why)}</span>
+    </button>`).join('') || '<p class="hint">Nothing in the catalogue looks like this line.</p>'}</div>
+    <div class="btn-row" style="margin-top:var(--s2)">
+      <button class="btn quiet sm" data-find="${l.id}">${ico('search')} Search catalogue</button>
+      <button class="btn quiet sm" data-manualprod="${l.id}">Type the product</button>
+      <button class="btn quiet sm" data-blank="${l.id}">${l.blank ? 'Put this line back' : 'Leave blank — confirmed by me'}</button>
+    </div>
+  </div>`;
+}
+
+function priceHTML(l) {
+  const label = l.priceSrc === 'lightspeed' ? '<span class="tag ok">Lightspeed price</span>'
+    : l.priceSrc === 'manual' ? '<span class="tag review">Manual price</span>'
+    : '<span class="tag bad">Price needed</span>';
+  const p = l.sku ? productOf(l) : null;
+  return `<div class="qty-row">
+    ${label}
+    <button class="btn quiet sm" data-price="${l.id}">${l.priceC > 0 ? money(l.priceC) : 'Enter price'}</button>
+    ${l.discC ? `<span class="hint">less ${money(l.discC)}</span>` : ''}
+    <button class="btn quiet sm" data-disc="${l.id}">Discount</button>
+    <span class="grow" style="text-align:right"><b class="money">${money(lineTotal(l))}</b></span>
+    ${p && p.stock != null ? `<span class="hint" style="flex-basis:100%">${p.stock} in stock at the snapshot of ${esc(SNAPSHOT)} — not live</span>` : ''}
+  </div>`;
+}
+
+;
+/* ============================================================================
+   Manual mode, the cart, and the finish screen.
+   ========================================================================= */
+
+let SEARCHQ = '', SEARCHCO = '', CATF = '';
+
+function vManual() {
+  const T0 = totals();
+  const C = ORDER.customer;
+  const cats = [...new Set(PROD.map(p => p.cat).filter(Boolean))].sort();
+  return `<div class="screen">
+    <div class="card">
+      <div class="eyebrow">Customer</div>
+      ${C.name ? `<div class="row" style="border:0"><span class="grow"><span class="nm">${esc(C.name)}</span>
+        <span class="sub">${esc(C.address || C.area || '')}${C.phone ? ' · ' + telFmt(C.phone) : ''}</span></span>
+        <button class="btn quiet sm" data-act="editCust">Edit</button></div>`
+      : `<input id="custq" placeholder="Search shop name or phone" autocomplete="off">
+        <ul class="list" id="custres"></ul>
+        <button class="btn quiet wide sm" style="margin-top:var(--s2)" data-act="manualCust">${ico('plus')} New customer just for this order</button>`}
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Add products</div>
+      <input id="prodq" placeholder="Search name, brand, SKU or barcode" autocomplete="off" value="${esc(SEARCHQ)}">
+      <div class="btn-row" style="margin-top:var(--s2)">
+        <button class="btn quiet sm" data-co="" aria-pressed="${SEARCHCO === ''}">Both companies</button>
+        <button class="btn quiet sm" data-co="YOL" aria-pressed="${SEARCHCO === 'YOL'}">YOL only</button>
+        <button class="btn quiet sm" data-co="MYCO" aria-pressed="${SEARCHCO === 'MYCO'}">MYCO only</button>
+        <button class="btn quiet sm" data-act="scan">${ico('camera')} Scan barcode</button>
+        <button class="btn quiet sm" data-act="customProd">${ico('plus')} Not in the list</button>
+      </div>
+      <div class="btn-row" style="margin-top:var(--s2)">
+        <button class="btn quiet sm" data-cat="" aria-pressed="${CATF === ''}">All</button>
+        <button class="btn quiet sm" data-cat="~recent" aria-pressed="${CATF === '~recent'}">Recent</button>
+        <button class="btn quiet sm" data-cat="~fav" aria-pressed="${CATF === '~fav'}">Favourites</button>
+        ${cats.slice(0, 6).map(c => `<button class="btn quiet sm" data-cat="${esc(c)}" aria-pressed="${CATF === c}">${esc(c)}</button>`).join('')}
+      </div>
+      <ul class="list" id="prodres" style="margin-top:var(--s2)"></ul>
+    </div>
+
+    ${ORDER.lines.length ? `<div class="card">
+      <div class="eyebrow">This order — ${ORDER.lines.filter(l => !l.blank).length} products · ${T0.units} units</div>
+      ${cartHTML()}
+      <div class="row" style="border:0"><span class="grow nm">Total</span><b class="money" style="font-size:var(--t-lg)">${money(T0.all)} TTD</b></div>
+      <button class="btn primary wide" data-act="toFinish">Check and finish</button>
+    </div>` : ''}
+
+    <div class="card">
+      <div class="eyebrow">Notes</div>
+      <label class="field"><span>Customer note</span><textarea rows="2" data-ord="notes">${esc(ORDER.notes)}</textarea></label>
+      <label class="field"><span>Delivery instructions</span><input value="${esc(ORDER.delivery)}" data-ord="delivery"></label>
+      <label class="field"><span>Note for the office</span><input value="${esc(ORDER.repNote)}" data-ord="repNote"></label>
+    </div>
+  </div>`;
+}
+
+function cartHTML() {
+  const bits = [];
+  for (const co of ['YOL', 'MYCO', '']) {
+    const ls = ORDER.lines.filter(l => !l.blank && (l.co || '') === co);
+    if (!ls.length) continue;
+    if (co) bits.push(`<div class="eyebrow" style="margin-top:var(--s3)">${co === 'YOL' ? 'Yusuf Overseas Ltd' : 'MYCO Global Distributors Ltd'}</div>`);
+    for (const l of ls) {
+      bits.push(`<div class="row" data-line="${l.id}" style="cursor:default">
+        <span class="grow"><span class="nm">${esc(l.name || l.text)}</span>
+        <span class="sub">${l.custom ? 'Not in the catalogue' : esc(l.sku)} · ${UNIT_LABEL[l.unit]} ·
+          ${l.priceC > 0 ? money(l.priceC) + (l.priceSrc === 'manual' ? ' (manual)' : '') : '<b style="color:var(--brick-2)">price needed</b>'}</span></span>
+        <span class="stepper" style="flex:0 0 auto">
+          <button data-qty="${l.id}" data-d="-1" aria-label="One fewer">−</button>
+          <input class="num" type="number" inputmode="numeric" min="0" value="${l.qty || 0}" data-setqty="${l.id}" aria-label="Quantity" style="width:52px">
+          <button data-qty="${l.id}" data-d="1" aria-label="One more">+</button>
+        </span>
+        <b class="money" style="min-width:74px;text-align:right">${money(lineTotal(l))}</b>
+        <span style="display:flex;flex-direction:column;gap:2px">
+          <button class="btn quiet sm" style="min-height:32px;padding:0 8px" data-move="${l.id}" data-d="-1" aria-label="Move up">↑</button>
+          <button class="btn quiet sm" style="min-height:32px;padding:0 8px" data-move="${l.id}" data-d="1" aria-label="Move down">↓</button>
+        </span>
+        <span style="display:flex;flex-direction:column;gap:2px">
+          <button class="btn quiet sm" style="min-height:32px;padding:0 8px" data-dupline="${l.id}" aria-label="Duplicate">${ico('copy')}</button>
+          <button class="btn quiet sm" style="min-height:32px;padding:0 8px" data-dropline="${l.id}" aria-label="Delete">${ico('trash')}</button>
+        </span>
+      </div>`);
+    }
+  }
+  const also = ORDER.customer.name ? alsoBought(ORDER.customer.name, new Set(ORDER.lines.map(l => l.co + '|' + l.sku))) : [];
+  if (also.length) bits.push(`<div class="eyebrow" style="margin-top:var(--s3)">This shop has also bought</div>
+    <div class="btn-row">${also.map(p => `<button class="btn quiet sm" data-add="${p.co}|${p.sku}">${esc(p.n.slice(0, 30))}</button>`).join('')}</div>`);
+  return bits.join('');
+}
+
+/* --------------------------------------------------------------- finish -- */
+function vFinish() {
+  const T0 = totals(), C = ORDER.customer, cnt = reviewCounts();
+  const both = T0.YOL > 0 && T0.MYCO > 0;
+  const blanks = ORDER.lines.filter(l => l.blank);
+  return `<div class="screen">
+    <div class="card">
+      <div class="eyebrow">Order ${ORDER.no || '— number on first save'}</div>
+      <div class="row" style="border:0"><span class="grow">
+        <span class="nm">${esc(C.name || 'No customer yet')}</span>
+        <span class="sub">${esc(C.address || C.area || '')}${C.phone ? ' · ' + telFmt(C.phone) : ''}</span></span>
+        <button class="btn quiet sm" data-act="editCust">Edit</button></div>
+      ${both ? `<p class="hint">This order carries both companies. The PDF separates Yusuf Overseas and MYCO Global Distributors clearly, and each can also be printed on its own.</p>` : ''}
+      ${cnt.noPrice ? `<p class="hint" style="color:var(--brick-2)">${cnt.noPrice} line${cnt.noPrice === 1 ? ' still needs' : 's still need'} a price. The PDF will say PRICE NEEDED on ${cnt.noPrice === 1 ? 'it' : 'them'}.</p>` : ''}
+      ${blanks.length ? `<p class="hint">${blanks.length} line${blanks.length === 1 ? '' : 's'} left blank go on the PDF as notes for the office.</p>` : ''}
+      <div class="rule"></div>
+      ${T0.YOL ? `<div class="row" style="border:0;min-height:36px;padding:4px 0"><span class="grow">Yusuf Overseas subtotal</span><b class="money">${money(T0.YOL)}</b></div>` : ''}
+      ${T0.MYCO ? `<div class="row" style="border:0;min-height:36px;padding:4px 0"><span class="grow">MYCO subtotal</span><b class="money">${money(T0.MYCO)}</b></div>` : ''}
+      ${T0.other ? `<div class="row" style="border:0;min-height:36px;padding:4px 0"><span class="grow">Products not in the catalogue</span><b class="money">${money(T0.other)}</b></div>` : ''}
+      ${T0.disc ? `<div class="row" style="border:0;min-height:36px;padding:4px 0"><span class="grow">Discounts</span><b class="money">−${money(T0.disc)}</b></div>` : ''}
+      <div class="row" style="border:0"><span class="grow nm">Total</span><b class="money" style="font-size:var(--t-xl)">${money(T0.all)} TTD</b></div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">Documents</div>
+      <div class="btn-row">
+        <button class="btn primary" data-pdf="preview">${ico('eye')} Preview PDF</button>
+        <button class="btn" data-pdf="BOTH">${ico('doc')} Save PDF</button>
+      </div>
+      ${both ? `<div class="btn-row" style="margin-top:var(--s2)">
+        <button class="btn quiet sm" data-pdf="YOL">YOL only</button>
+        <button class="btn quiet sm" data-pdf="MYCO">MYCO only</button>
+        <button class="btn quiet sm" data-pdf="BOTH-letter">US Letter</button>
+      </div>` : `<div class="btn-row" style="margin-top:var(--s2)"><button class="btn quiet sm" data-pdf="BOTH-letter">US Letter size</button></div>`}
+      <div class="btn-row" style="margin-top:var(--s2)">
+        <button class="btn quiet sm" data-act="print">${ico('print')} Print</button>
+        <button class="btn quiet sm" data-act="share">${ico('share')} Share</button>
+        <button class="btn quiet sm" data-act="whatsapp">WhatsApp summary</button>
+        <button class="btn quiet sm" data-act="email">Email</button>
+        <button class="btn quiet sm" data-act="copytext">Copy as text</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="eyebrow">After this</div>
+      <div class="btn-row">
+        <button class="btn quiet sm" data-act="backToLines">Edit the order</button>
+        <button class="btn quiet sm" data-act="duplicate">${ico('copy')} Duplicate order</button>
+        <button class="btn quiet sm" data-act="complete">${ico('check')} Mark completed</button>
+        <button class="btn quiet sm" data-act="another">New order</button>
+      </div>
+      ${ORDER.pages.length ? `<div class="rule"></div>
+        <button class="btn danger wide sm" data-act="forgetPhotos">${ico('trash')} Delete the photograph from this phone</button>
+        <p class="hint">Only after the PDF is saved. The order lines stay either way.</p>`
+      : ORDER.photosForgotten ? `<p class="hint">Photograph deleted from this phone on ${esc(ORDER.photosForgotten)}.</p>` : ''}
+    </div>
+  </div>`;
+}
+
+/* text summary for WhatsApp / copy / email */
+function orderText() {
+  const T0 = totals(), C = ORDER.customer;
+  let t = 'SALES ORDER ' + nextOrderNo() + ' — ' + (C.name || '') + ' — ' + ORDER.date + '\n';
+  if (C.trading && norm(C.trading) !== norm(C.name)) t += 'Trading as: ' + C.trading + '\n';
+  if (C.contact) t += 'Contact: ' + C.contact + '\n';
+  if (telFmt(C.phone)) t += 'Phone: ' + telFmt(C.phone) + '\n';
+  if (ORDER.rep || settings.rep) t += 'Rep: ' + (ORDER.rep || settings.rep) + '\n';
+  t += '\n';
+  for (const co of ['YOL', 'MYCO', '']) {
+    const ls = ORDER.lines.filter(l => !l.blank && (l.co || '') === co && l.qty > 0);
+    if (!ls.length) continue;
+    t += (co === 'YOL' ? 'YUSUF OVERSEAS LTD' : co === 'MYCO' ? 'MYCO GLOBAL DISTRIBUTORS LTD' : 'OTHER') + '\n';
+    ls.forEach((l, i) => {
+      t += (i + 1) + '. ' + (l.name || l.text) + '  x' + l.qty + ' ' + UNIT_LABEL[l.unit].toLowerCase() +
+        (l.priceC > 0 ? ' @ ' + money(l.priceC) : ' @ PRICE NEEDED') +
+        (l.discC ? ' less ' + money(l.discC) : '') + ' = ' + money(lineTotal(l)) + '\n';
+    });
+    if (co) t += 'Subtotal: ' + money(T0[co]) + '\n';
+    t += '\n';
+  }
+  t += 'TOTAL: ' + money(T0.all) + ' TTD\n';
+  if (ORDER.notes) t += 'Notes: ' + ORDER.notes + '\n';
+  if (ORDER.delivery) t += 'Delivery: ' + ORDER.delivery + '\n';
+  t += '\nSales order — stock, price and delivery subject to final office confirmation.';
+  return t;
+}
+
+;
+/* ============================================================================
+   Orders, Customers, Products, Settings tabs. Long lists are virtualised.
+   ========================================================================= */
+
+let ORDQ = '', CUSTTABQ = '', PRODTABQ = '';
+
+function vOrders() {
+  const all = Object.values(orders)
+    .filter(o => (o.lines || []).length || (o.pages || []).length)
+    .sort((a, b) => (b.created || '').localeCompare(a.created || ''));
+  const q = norm(ORDQ);
+  const rows = q ? all.filter(o => norm(o.customer.name + ' ' + (o.no || '') + ' ' + o.date).indexOf(q) >= 0) : all;
+  return `<div class="screen">
+    <input id="ordq" placeholder="Search orders by shop, number or date" value="${esc(ORDQ)}" autocomplete="off">
+    ${rows.length ? `<div class="card" style="margin-top:var(--s3)"><ul class="list">
+      ${rows.slice(0, 80).map(o => `<li><button class="row" data-open="${o.id}">
+        <span class="grow"><span class="nm">${esc(o.customer.name || 'Untitled')}</span>
+        <span class="sub">${o.no ? 'Order ' + o.no + ' · ' : ''}${esc(o.date)} · ${(o.lines || []).filter(l => !l.blank).length} products · ${money(orderTotal(o))}</span></span>
+        <span class="tag ${o.status === 'Completed' ? 'ok' : 'plain'}">${esc(o.status)}</span></button>
+        <div class="btn-row" style="padding:0 0 var(--s2)">
+          <button class="btn quiet sm" data-dup="${o.id}">${ico('copy')} Duplicate</button>
+          <button class="btn quiet sm" data-del="${o.id}">${ico('trash')} Delete</button>
+        </div></li>`).join('')}</ul>
+      ${rows.length > 80 ? `<p class="hint">Showing 80 of ${rows.length} — keep typing to narrow it.</p>` : ''}</div>`
+    : `<div class="empty">${ico('doc')}<p>No orders yet.</p><button class="btn primary" data-act="goNew">Start the first one</button></div>`}
+  </div>`;
+}
+
+function vCustomers() {
+  const q = CUSTTABQ.trim();
+  const res = q ? searchCustomers(q, 60) : [];
+  return `<div class="screen">
+    <input id="custtabq" placeholder="Search ${CUST.length.toLocaleString()} customers — name, phone, town" value="${esc(CUSTTABQ)}" autocomplete="off">
+    ${q ? (res.length ? `<div class="card" style="margin-top:var(--s3)"><ul class="list">
+      ${res.map(r => `<li><button class="row" data-custopen="${r.i}">
+        <span class="grow"><span class="nm">${esc(r.c.n)}</span>
+        <span class="sub">${esc(r.c.ad || r.c.t || '')}${r.c.p ? ' · ' + telFmt(r.c.p) : ''}</span>
+        <span class="sub">${r.c.terr}${r.c.yol ? ' · YOL customer' : ''}${r.c.myco ? ' · MYCO customer' : ''}${r.c.rot ? ' · rotation sheet' : ''}</span></span>
+        ${ico('back', 'flip')}</button></li>`).join('')}</ul></div>`
+      : `<div class="empty">${ico('people')}<p>No customer matches "${esc(q)}".</p></div>`)
+    : `<div class="card" style="margin-top:var(--s3)">
+        <div class="eyebrow">Customer records</div>
+        <p>${CUST.length.toLocaleString()} shops from the North, Central and South books, Lightspeed accounts and rotation sheets. Read-only — orders here never change Lightspeed.</p>
+      </div>`}
+  </div>`;
+}
+
+function vProducts() {
+  const q = PRODTABQ.trim();
+  const res = q ? searchProducts(q, { limit: 60 }) : [];
+  return `<div class="screen">
+    <input id="prodtabq" placeholder="Search ${PROD.length} products — name, brand, barcode" value="${esc(PRODTABQ)}" autocomplete="off">
+    ${q ? (res.length ? `<div class="card" style="margin-top:var(--s3)"><ul class="list">
+      ${res.map(r => `<li class="row" style="cursor:default">
+        <span class="grow"><span class="nm">${esc(r.p.n)}</span>
+        <span class="sub">${r.p.co} · ${esc(r.p.b || '')} · ${esc(r.p.sku)}</span>
+        <span class="sub">${r.p.price > 0 ? money(Math.round(r.p.price * 100)) + ' — Lightspeed price' : 'PRICE NEEDED'}${r.p.cp ? ' · case of ' + r.p.cs + ' ' + money(Math.round(r.p.cp * 100)) : ''}${r.p.stock != null ? ' · ' + r.p.stock + ' at snapshot' : ''}</span></span>
+      </li>`).join('')}</ul></div>`
+      : `<div class="empty">${ico('box')}<p>Nothing matches "${esc(q)}".</p></div>`)
+    : `<div class="card" style="margin-top:var(--s3)">
+        <div class="eyebrow">Catalogue</div>
+        <p>${PROD.filter(p => p.co === 'YOL').length} Yusuf Overseas and ${PROD.filter(p => p.co === 'MYCO').length} MYCO products, from the read-only Lightspeed snapshot of <b>${esc(SNAPSHOT)}</b>.</p>
+        ${manualProducts.length ? `<div class="eyebrow" style="margin-top:var(--s3)">Saved reusable products</div>
+        <ul class="list">${manualProducts.map((m, i) => `<li class="row" style="cursor:default">
+          <span class="grow"><span class="nm">${esc(m.n)}</span><span class="sub">${m.co} · manual product</span></span>
+          <button class="btn quiet sm" data-delmanual="${i}">${ico('trash')}</button></li>`).join('')}</ul>` : ''}
+      </div>`}
+  </div>`;
+}
+
+function vSettings() {
+  return `<div class="screen">
+    <div class="card">
+      <div class="eyebrow">This app</div>
+      <div class="row" style="cursor:default"><span class="grow">Bill Maker</span><span class="sub num">v${APP_VER}</span></div>
+      <div class="row" style="cursor:default"><span class="grow">Catalogue snapshot</span><span class="sub">${esc(SNAPSHOT)}</span></div>
+      <div class="row" style="cursor:default"><span class="grow">Customers on file</span><span class="sub num">${CUST.length.toLocaleString()}</span></div>
+      <button class="btn quiet wide sm" data-act="checkUpdate" style="margin-top:var(--s2)">Check for an update</button>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Representative</div>
+      <label class="field"><span>Name shown on orders</span>
+      <input value="${esc(settings.rep || '')}" data-set="rep" placeholder="e.g. Susan"></label>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Reading service</div>
+      <label class="field"><span>Address</span>
+      <input value="${esc(settings.reader || '')}" data-set="reader" placeholder="https://…workers.dev" inputmode="url"></label>
+      <p class="hint">Photographs are sent here once, to be read. The key lives on the service, never on this phone. Leave empty to use /api/read on this site.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Appearance</div>
+      <div class="btn-row">
+        ${['system', 'light', 'dark'].map(t => `<button class="btn quiet sm" data-theme="${t}" aria-pressed="${(settings.theme || 'system') === t}">${t[0].toUpperCase() + t.slice(1)}</button>`).join('')}
+      </div>
+      <label class="field" style="margin-top:var(--s3)"><span>Haptic feedback</span>
+        <select data-set="haptics"><option value="1"${settings.haptics ? ' selected' : ''}>On</option><option value=""${settings.haptics ? '' : ' selected'}>Off</option></select></label>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Backup</div>
+      <div class="btn-row">
+        <button class="btn quiet sm" data-act="backup">${ico('share')} Save a backup file</button>
+        <button class="btn quiet sm" data-act="restore">Restore from backup</button>
+      </div>
+      <input id="restorefile" type="file" accept="application/json" hidden>
+      <p class="hint">The backup holds orders, learned corrections and settings. Photographs stay on the phone and are not in the file. Restoring never deletes anything — it only adds what is missing.</p>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Stored on this phone</div>
+      <div class="row" style="cursor:default"><span class="grow">Orders</span><span class="sub num">${Object.keys(orders).length}</span></div>
+      <div class="row" style="cursor:default"><span class="grow">Photographs</span><span class="sub num" id="photocount">…</span></div>
+      <div class="row" style="cursor:default"><span class="grow">Learned corrections</span><span class="sub num">${Object.keys(fixes).length}</span></div>
+    </div>
+  </div>`;
+}
+
+/* --------------------------------------------------------------- backup -- */
+function backupFile() {
+  const data = { app: 'billmaker', ver: APP_VER, at: new Date().toISOString(),
+    orders, fixes, favs, recents, manualProducts, settings, seq: LS('seq', 0) };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'billmaker-backup-' + todayISO() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+function restoreFrom(text) {
+  let d;
+  try { d = JSON.parse(text); } catch (_) { alert('That file is not a Bill Maker backup.'); return; }
+  if (d.app !== 'billmaker' || !d.orders) { alert('That file is not a Bill Maker backup.'); return; }
+  let added = 0;
+  for (const id in d.orders) if (!orders[id]) { orders[id] = d.orders[id]; added++; }
+  for (const k in d.fixes || {}) if (!fixes[k]) fixes[k] = d.fixes[k];
+  for (const k in d.favs || {}) favs[k] = 1;
+  (d.manualProducts || []).forEach(m => { if (!manualProducts.some(x => x.n === m.n)) manualProducts.push(m); });
+  if ((d.seq | 0) > (LS('seq', 0) | 0)) SAVE('seq', d.seq | 0);
+  SAVE('orders', orders); SAVE('fixes', fixes); SAVE('favs', favs); SAVE('manualprods', manualProducts);
+  alert('Restored. ' + added + ' order' + (added === 1 ? '' : 's') + ' added; nothing was deleted or overwritten.');
+  render();
+}
+
+;
+/* ============================================================================
+   Router, events, boot. One delegated listener — no per-element handlers.
+   ========================================================================= */
+
+const TABS = [
+  ['new', 'New Order', 'plus'], ['orders', 'Orders', 'doc'],
+  ['customers', 'Customers', 'people'], ['products', 'Products', 'box'],
+  ['settings', 'Settings', 'gear'],
+];
+
+function title() {
+  if (VIEW.tab !== 'new') return TABS.find(t => t[0] === VIEW.tab)[1];
+  if (!ORDER) return 'New Order';
+  if (VIEW.sub === 'photo') return 'Photograph the order';
+  if (VIEW.sub === 'review') return 'Check the reading';
+  if (VIEW.sub === 'manual') return ORDER.customer.name || 'Build the order';
+  if (VIEW.sub === 'finish') return 'Order ' + (ORDER.no || '');
+  return 'New Order';
+}
+
+function render() {
+  const app = document.getElementById('app');
+  const back = VIEW.tab === 'new' && VIEW.sub;
+  app.innerHTML = `
+    <header class="topbar">
+      ${back ? `<button class="btn quiet sm" data-act="back" aria-label="Back">${ico('back')}</button>` : ''}
+      <h1>${esc(title())}</h1>
+      <span id="savedmark" class="hint" style="opacity:0;transition:opacity .4s">Saved</span>
+    </header>
+    <main id="main">${
+      VIEW.tab === 'orders' ? vOrders()
+      : VIEW.tab === 'customers' ? vCustomers()
+      : VIEW.tab === 'products' ? vProducts()
+      : VIEW.tab === 'settings' ? vSettings()
+      : !ORDER || !VIEW.sub ? vNewOrder()
+      : VIEW.sub === 'photo' ? vPhoto()
+      : VIEW.sub === 'review' ? vReview()
+      : VIEW.sub === 'finish' ? vFinish()
+      : vManual()
+    }</main>
+    <nav class="tabs" aria-label="Main">
+      ${TABS.map(([id, label, icon]) => `<button data-tab="${id}" ${VIEW.tab === id ? 'aria-current="page"' : ''}>
+        ${ico(icon)}<span>${label}</span></button>`).join('')}
+    </nav>
+    ${VIEW.viewer != null ? viewerHTML() : ''}`;
+  paintStages();
+  wireSearches();
+  if (VIEW.tab === 'settings') idb.count('photos').then(n => { const el = document.getElementById('photocount'); if (el) el.textContent = n; });
+}
+
+function viewerHTML() {
+  const v = VIEW.viewer, p = ORDER && ORDER.pages[v.page];
+  if (!p) return '';
+  return `<div class="viewer" data-act="closeViewer" role="dialog" aria-label="Photograph">
+    <div class="bar">
+      <button class="btn quiet sm" data-vw="orig" aria-pressed="${v.which === 'orig'}">Original</button>
+      <button class="btn quiet sm" data-vw="clean" aria-pressed="${v.which !== 'orig'}">Cleaned up</button>
+      <button class="btn quiet sm" data-act="closeViewer2">${ico('x')} Close</button>
+    </div>
+    <div class="pane" id="vpane"><img id="vimg" alt="Order photograph, full size"></div>
+  </div>`;
+}
+async function openViewer(page, box) {
+  VIEW.viewer = { page, box: box || null, which: 'clean', urls: null };
+  render();
+  const rec = await idb.get('photos', ORDER.pages[page].id);
+  if (!rec) { VIEW.viewer = null; render(); alert('That photograph is no longer stored on this phone.'); return; }
+  VIEW.viewer.urls = { orig: URL.createObjectURL(rec.original), clean: URL.createObjectURL(rec.clean) };
+  paintViewer();
+}
+function paintViewer() {
+  const v = VIEW.viewer; if (!v || !v.urls) return;
+  const img = document.getElementById('vimg'), pane = document.getElementById('vpane');
+  if (!img) return;
+  img.src = v.which === 'orig' ? v.urls.orig : v.urls.clean;
+  img.onload = () => {
+    const p = ORDER.pages[v.page];
+    const k = Math.max(1.6, (pane.clientWidth * 1.9) / img.naturalWidth);
+    img.style.width = (img.naturalWidth * k) + 'px';
+    if (v.box) {   // land the scroll on the exact strip the line came from
+      pane.scrollLeft = v.box[0] * img.naturalWidth * k - 30;
+      pane.scrollTop = v.box[1] * img.naturalHeight * k - pane.clientHeight * 0.3;
+    }
+  };
+}
+function closeViewer() {
+  const v = VIEW.viewer;
+  if (v && v.urls) { URL.revokeObjectURL(v.urls.orig); URL.revokeObjectURL(v.urls.clean); }
+  VIEW.viewer = null; render();
+}
+
+/* ------------------------------------------------------- search wiring --
+   Inputs are wired directly (they need debounce + focus preservation). */
+function wireSearches() {
+  const deb = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+  const keep = (el, fn) => { if (!el) return; el.addEventListener('input', e => fn(e.target.value)); };
+
+  keep(document.getElementById('prodq'), deb(v => { SEARCHQ = v; paintProdResults(); }, 70));
+  keep(document.getElementById('custq'), deb(v => paintCustResults(v), 70));
+  keep(document.getElementById('ordq'), deb(v => { ORDQ = v; const el = document.getElementById('ordq'); const p = el.selectionStart; render(); const e2 = document.getElementById('ordq'); if (e2) { e2.focus(); e2.setSelectionRange(p, p); } }, 200));
+  keep(document.getElementById('custtabq'), deb(v => { CUSTTABQ = v; const p = document.getElementById('custtabq').selectionStart; render(); const e2 = document.getElementById('custtabq'); if (e2) { e2.focus(); e2.setSelectionRange(p, p); } }, 150));
+  keep(document.getElementById('prodtabq'), deb(v => { PRODTABQ = v; const p = document.getElementById('prodtabq').selectionStart; render(); const e2 = document.getElementById('prodtabq'); if (e2) { e2.focus(); e2.setSelectionRange(p, p); } }, 150));
+  if (VIEW.tab === 'new' && VIEW.sub === 'manual') paintProdResults();
+}
+
+function paintProdResults() {
+  const el = document.getElementById('prodres'); if (!el) return;
+  let rows = [];
+  if (SEARCHQ.trim()) {
+    rows = searchProducts(SEARCHQ, { limit: 24, company: SEARCHCO || null,
+      history: historyFor(ORDER.customer.name) }).map(r => r.p);
+  } else if (CATF === '~recent') rows = recents.map(productByKey).filter(Boolean).slice(0, 20);
+  else if (CATF === '~fav') rows = Object.keys(favs).map(productByKey).filter(Boolean);
+  else if (CATF) rows = PROD.filter(p => p.cat === CATF && (!SEARCHCO || p.co === SEARCHCO)).slice(0, 30);
+  else rows = recents.map(productByKey).filter(Boolean).slice(0, 8);
+
+  el.innerHTML = rows.map(p => {
+    const key = p.co + '|' + p.sku;
+    const inOrder = ORDER.lines.find(l => l.sku === p.sku && l.co === p.co && !l.blank);
+    return `<li class="row" style="cursor:default">
+      <button class="btn quiet sm" style="min-height:40px;padding:0 8px" data-fav="${key}" aria-label="${favs[key] ? 'Remove favourite' : 'Make favourite'}" aria-pressed="${!!favs[key]}">★</button>
+      <span class="grow"><span class="nm">${esc(p.n)}</span>
+      <span class="sub">${p.co} · ${esc(p.sku)} · ${p.price > 0 ? money(Math.round(p.price * 100)) : '<b style="color:var(--brick-2)">price needed</b>'}${p.cp ? ' · case ' + money(Math.round(p.cp * 100)) : ''}${p.stock != null ? ' · ' + p.stock + ' at snapshot' : ''}</span></span>
+      <button class="btn sm ${inOrder ? 'primary' : ''}" data-add="${key}">${inOrder ? '+' + inOrder.qty : 'Add'}</button>
+      ${p.cp ? `<button class="btn quiet sm" data-add="${key}" data-case="1">Case</button>` : ''}
+    </li>`;
+  }).join('') || (SEARCHQ.trim() ? '<li class="row" style="cursor:default"><span class="grow sub">Nothing matches. Try fewer words, or add it as a product not in the list.</span></li>' : '');
+}
+function paintCustResults(q) {
+  const el = document.getElementById('custres'); if (!el) return;
+  const rows = q.trim() ? searchCustomers(q, 8) : [];
+  el.innerHTML = rows.map(r => `<li><button class="row" data-cust="${r.i}">
+    <span class="grow"><span class="nm">${esc(r.c.n)}</span>
+    <span class="sub">${esc(r.c.ad || r.c.t || '')}${r.c.p ? ' · ' + telFmt(r.c.p) : ''}</span></span>
+    ${ico('back', 'flip')}</button></li>`).join('');
+}
+
+/* ------------------------------------------------------------- actions -- */
+function lineById(id) { return ORDER.lines.find(l => l.id === id); }
+function refreshLine(l) { l.state = companyProblem(l) ? 'COMPANY' : tierFor(l); }
+
+function addProduct(key, asCase) {
+  const p = productByKey(key); if (!p) return;
+  buzz(settings.haptics ? 9 : 0);
+  let l = ORDER.lines.find(x => x.sku === p.sku && x.co === p.co && !x.blank && (asCase ? x.unit === 'case' : x.unit !== 'case'));
+  if (!l) {
+    l = makeLine({ raw: '', text: p.n, qty: 0, c: 'clear', kind: 'item' }, null);
+    l.cands = [{ key, p, score: 99, why: 'chosen by you' }];
+    applyProduct(l, key, true);
+    l.unit = asCase && p.cp ? 'case' : 'piece';
+    if (l.unit === 'case') { l.priceC = Math.round(p.cp * 100); }
+    l.state = 'OK';
+    ORDER.lines.push(l);
+  }
+  l.qty = (l.qty || 0) + 1;
+  const rk = key, at = recents.indexOf(rk);
+  if (at >= 0) recents.splice(at, 1);
+  recents.unshift(rk); if (recents.length > 40) recents.length = 40;
+  SAVE('recents', recents);
+  touch(); render();
+}
+
+async function scanBarcode() {
+  if (!('BarcodeDetector' in window)) {
+    alert('This browser cannot scan barcodes with the camera.\n\nType the last digits of the barcode into the search box instead — search already reads barcodes.');
+    return;
+  }
+  try {
+    const det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] });
+    const st = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const v = document.createElement('video');
+    v.srcObject = st; v.playsInline = true; await v.play();
+    const stop = () => { st.getTracks().forEach(t => t.stop()); v.remove(); };
+    const t0 = Date.now();
+    while (Date.now() - t0 < 15000) {
+      const codes = await det.detect(v).catch(() => []);
+      if (codes.length) {
+        const code = codes[0].rawValue; stop();
+        const hit = PROD.find(p => p.sku === code);
+        if (hit) { addProduct(hit.co + '|' + hit.sku); }
+        else { SEARCHQ = code; render(); alert('Barcode ' + code + ' is not in the catalogue snapshot.'); }
+        return;
+      }
+      await new Promise(r => setTimeout(r, 170));
+    }
+    stop(); alert('No barcode seen. Try again, or type the digits into the search box.');
+  } catch (e) { alert('The camera could not be opened: ' + (e.message || e)); }
+}
+
+function customProduct(forLineId) {
+  const n = prompt('Product name, exactly as the customer asked for it:');
+  if (!n || !n.trim()) return;
+  const co = prompt('Which company supplies it — type YOL or MYCO:', 'YOL');
+  if (co === null) return;
+  const CO = String(co).trim().toUpperCase();
+  if (CO !== 'YOL' && CO !== 'MYCO') { alert('Type YOL or MYCO. If unsure, ask the office before it goes on the order.'); return; }
+  const priceS = prompt('Price in TT$ if you know it — leave empty for PRICE NEEDED:', '');
+  const priceC = priceS && !isNaN(parseFloat(priceS)) ? Math.round(parseFloat(priceS) * 100) : 0;
+  let l = forLineId ? lineById(forLineId) : null;
+  if (!l) {
+    l = makeLine({ raw: '', text: n.trim(), qty: 1, c: 'clear', kind: 'item' }, null);
+    ORDER.lines.push(l);
+  }
+  Object.assign(l, { custom: true, sku: null, name: n.trim(), co: CO,
+    priceC, priceSrc: priceC ? 'manual' : 'none', state: 'OK', cands: [], blank: false });
+  if (!(l.qty > 0)) l.qty = 1;
+  if (confirm('Keep "' + n.trim() + '" as a reusable product for future orders?\n\nOK keeps it. Cancel uses it for this order only.')) {
+    manualProducts.push({ n: n.trim(), co: CO, priceC });
+    SAVE('manualprods', manualProducts);
+  }
+  touch(); render();
+}
+
+function acceptReview() {
+  const C = reviewCounts();
+  if (C.open) { alert(C.open + ' line' + (C.open === 1 ? '' : 's') + ' still need' + (C.open === 1 ? 's' : '') + ' you.\n\nFix each brick-red line, or mark it "Leave blank — confirmed by me".'); return; }
+  const dup = duplicateWarning();
+  if (dup && !confirm('POSSIBLE DUPLICATE ORDER — CHECK BEFORE SAVING\n\n' + dup + '\n\nKeep this order anyway?')) return;
+  const notes = [];
+  for (const l of ORDER.lines) {
+    if (l.blank) notes.push((l.kind === 'assortment' ? 'MIXED CASE — office to choose the assortment: ' : 'LEFT BLANK, CONFIRMED BY REP: ') + (l.raw || l.text));
+  }
+  if (notes.length) {
+    const existing = ORDER.notes || '';
+    for (const n of notes) if (existing.indexOf(n) < 0) ORDER.notes = (ORDER.notes ? ORDER.notes + '\n' : '') + n;
+  }
+  ORDER.reviewed = todayISO();
+  VIEW.sub = 'manual';
+  touch(); render();
+}
+
+async function forgetPhotos() {
+  if (!confirm('Delete the photograph from this phone?\n\nThe order lines stay. Only do this once the PDF is saved.')) return;
+  for (const p of ORDER.pages) { await idb.del('photos', p.id); if (p.thumbUrl) URL.revokeObjectURL(p.thumbUrl); }
+  ORDER.pages = [];
+  ORDER.photosForgotten = todayISO();
+  touch(); render();
+}
+
+/* one delegated click handler for the whole app */
+document.addEventListener('click', async e => {
+  const t = e.target.closest('[data-tab],[data-act],[data-open],[data-cust],[data-custopen],[data-add],[data-pick],[data-fav],[data-qty],[data-move],[data-dupline],[data-dropline],[data-blank],[data-find],[data-manualprod],[data-price],[data-disc],[data-zoom],[data-vw],[data-rot],[data-retake],[data-up],[data-down],[data-drop],[data-pdf],[data-co],[data-cat],[data-dup],[data-del],[data-theme],[data-delmanual]');
+  if (!t) return;
+  const D = t.dataset;
+
+  if (D.tab) { VIEW.tab = D.tab; VIEW.sub = VIEW.tab === 'new' && ORDER ? VIEW.sub : ''; if (VIEW.tab !== 'new') VIEW.sub = ''; render(); return; }
+
+  if (D.act) {
+    const act = D.act;
+    if (act === 'startPhoto') { ORDER = blankOrder(); ORDER.mode = 'photo'; VIEW.sub = 'photo'; readError = ''; touch(); render(); setTimeout(() => { const c = document.getElementById('cam'); if (c) c.click(); }, 150); }
+    else if (act === 'startManual') { if (!ORDER || VIEW.sub !== 'photo') ORDER = blankOrder(); ORDER.mode = ORDER.mode || 'manual'; VIEW.sub = 'manual'; touch(); render(); }
+    else if (act === 'back') {
+      if (VIEW.viewer) { closeViewer(); return; }
+      VIEW.sub = VIEW.sub === 'finish' ? 'manual' : VIEW.sub === 'review' ? 'photo' : VIEW.sub === 'manual' && ORDER.mode === 'photo' && ORDER.read ? 'review' : '';
+      render();
+    }
+    else if (act === 'shoot') document.getElementById('cam').click();
+    else if (act === 'pick') document.getElementById('lib').click();
+    else if (act === 'read') readPages();
+    else if (act === 'acceptReview') acceptReview();
+    else if (act === 'toFinish') {
+      const missing = ORDER.lines.filter(l => !l.blank && l.qty > 0 && !(l.priceC > 0));
+      if (!ORDER.customer.name) { alert('The customer name is needed first.'); return; }
+      if (missing.length && !confirm(missing.length + ' line' + (missing.length === 1 ? ' has' : 's have') + ' no price and will print as PRICE NEEDED.\n\nContinue?')) return;
+      const dup = duplicateWarning();
+      if (dup && !confirm('POSSIBLE DUPLICATE ORDER — CHECK BEFORE SAVING\n\n' + dup + '\n\nContinue anyway?')) return;
+      nextOrderNo(); VIEW.sub = 'finish'; touch(); render();
+    }
+    else if (act === 'backToLines') { VIEW.sub = 'manual'; render(); }
+    else if (act === 'goOrders') { VIEW.tab = 'orders'; render(); }
+    else if (act === 'goNew') { VIEW.tab = 'new'; VIEW.sub = ''; render(); }
+    else if (act === 'goSettings') { VIEW.tab = 'settings'; render(); }
+    else if (act === 'manualCust') {
+      ORDER.customer.manual = true; ORDER.customer.custIndex = null;
+      if (ORDER.read) { const f = ORDER.read.fields; ORDER.customer.name = ORDER.customer.name || f.shop.v; }
+      ORDER.custChoices = null; VIEW.sub = VIEW.sub === 'review' ? 'review' : 'manual';
+      editCustomer(); return;
+    }
+    else if (act === 'editCust') { editCustomer(); return; }
+    else if (act === 'clearCust') { ORDER.customer.custIndex = null; touch(); render(); }
+    else if (act === 'scan') scanBarcode();
+    else if (act === 'customProd') customProduct(null);
+    else if (act === 'duplicate') {
+      const src = ORDER;
+      ORDER = blankOrder();
+      ORDER.customer = { ...src.customer };
+      ORDER.lines = src.lines.filter(l => !l.blank).map(l => ({ ...l, id: 'l' + Math.random().toString(36).slice(2, 8) }));
+      ORDER.notes = src.notes; ORDER.delivery = src.delivery; ORDER.mode = 'manual';
+      VIEW.sub = 'manual'; touch(); render();
+    }
+    else if (act === 'complete') { ORDER.status = 'Completed'; touch(); render(); }
+    else if (act === 'another') { ORDER = null; VIEW.sub = ''; render(); }
+    else if (act === 'forgetPhotos') forgetPhotos();
+    else if (act === 'print') { window.print(); }
+    else if (act === 'share') {
+      const text = orderText();
+      if (navigator.share) { try { await navigator.share({ title: 'Order ' + nextOrderNo() + ' — ' + ORDER.customer.name, text }); } catch (_) {} }
+      else { await navigator.clipboard.writeText(text).catch(() => prompt('Copy the order:', text)); alert('Copied — sharing is not available in this browser.'); }
+    }
+    else if (act === 'whatsapp') {
+      const num = waNum(ORDER.customer.phone);
+      const text = prompt('Check the WhatsApp message before it opens:', orderText());
+      if (text === null) return;
+      window.open('https://wa.me/' + (num || '') + '?text=' + encodeURIComponent(text), '_blank');
+    }
+    else if (act === 'email') {
+      const sub = 'Order ' + nextOrderNo() + ' — ' + ORDER.customer.name + ' — ' + ORDER.date;
+      location.href = 'mailto:?subject=' + encodeURIComponent(sub) + '&body=' + encodeURIComponent(orderText() + '\n\nThe PDF is saved on the phone as ' + pdfName('BOTH') + ' — attach it before sending.');
+    }
+    else if (act === 'copytext') { await navigator.clipboard.writeText(orderText()).catch(() => prompt('Copy the order:', orderText())); flashSaved(); }
+    else if (act === 'backup') backupFile();
+    else if (act === 'restore') document.getElementById('restorefile').click();
+    else if (act === 'checkUpdate') {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const r of regs) await r.update();
+        alert('Checked. If a new version exists it is downloaded now and used the next time the app opens.');
+      } else alert('The offline copy is not installed yet — open the app once with internet.');
+    }
+    else if (act === 'closeViewer') { if (e.target === t) closeViewer(); }
+    else if (act === 'closeViewer2') closeViewer();
+    return;
+  }
+
+  if (D.zoom != null) { openViewer(+D.zoom, D.box && D.box !== 'null' ? JSON.parse(D.box) : null); return; }
+  if (D.vw) { VIEW.viewer.which = D.vw; render(); paintViewer(); return; }
+  if (D.open) { const o = orders[D.open]; if (!o) return; ORDER = o; VIEW.tab = 'new'; VIEW.sub = o.read && !o.reviewed ? 'review' : (o.status !== 'Draft' ? 'finish' : (o.pages.length && !o.lines.length ? 'photo' : 'manual')); rehydratePages(); render(); return; }
+  if (D.cust) { pickCustomer(+D.cust); return; }
+  if (D.custopen) { CUSTTABQ = CUST[+D.custopen].n; ORDER = ORDER || blankOrder(); pickCustomer(+D.custopen); VIEW.tab = 'new'; VIEW.sub = 'manual'; render(); return; }
+  if (D.add) { addProduct(D.add, !!D.case); return; }
+  if (D.fav) { favs[D.fav] ? delete favs[D.fav] : favs[D.fav] = 1; SAVE('favs', favs); paintProdResults(); return; }
+  if (D.pick) { const l = lineById(D.pick); if (!l) return; buzz(settings.haptics ? 9 : 0);
+    if (l.sku && l.cands.some(c => c.key === D.key && c.p.sku === l.sku && c.p.co === l.co)) { l.sku = null; l.co = ''; l.name = ''; l.priceC = 0; l.priceSrc = 'none'; refreshLine(l); }
+    else applyProduct(l, D.key, false);
+    l.blank = false; touch(); render(); return; }
+  if (D.qty) { const l = lineById(D.qty); if (!l) return; buzz(settings.haptics ? 7 : 0);
+    l.qty = Math.max(0, (l.qty || 0) + (+D.d)); if (!l.qty && VIEW.sub === 'manual') ORDER.lines = ORDER.lines.filter(x => x !== l);
+    refreshLine(l); touch(); render(); return; }
+  if (D.move) { const i = ORDER.lines.findIndex(l => l.id === D.move), j = i + (+D.d);
+    if (i < 0 || j < 0 || j >= ORDER.lines.length) return;
+    [ORDER.lines[i], ORDER.lines[j]] = [ORDER.lines[j], ORDER.lines[i]]; touch(); render(); return; }
+  if (D.dupline) { const l = lineById(D.dupline); if (!l) return;
+    const c = { ...l, id: 'l' + Math.random().toString(36).slice(2, 8) };
+    ORDER.lines.splice(ORDER.lines.indexOf(l) + 1, 0, c); touch(); render(); return; }
+  if (D.dropline) { const l = lineById(D.dropline); if (!l) return;
+    const at = ORDER.lines.indexOf(l); ORDER.lines.splice(at, 1); touch(); render();
+    toastUndo('Line removed', () => { ORDER.lines.splice(at, 0, l); touch(); render(); }); return; }
+  if (D.blank) { const l = lineById(D.blank); if (!l) return;
+    l.blank = !l.blank; if (l.blank) { l.sku = null; l.co = ''; } touch(); render(); return; }
+  if (D.find) { const l = lineById(D.find); if (!l) return;
+    const q = prompt('Search the catalogue for this line:', l.text);
+    if (q === null) return;
+    const c = searchProducts(q, { limit: 3 });
+    if (!c.length) { alert('Nothing in the catalogue looks like that. Type the product instead, or leave the line blank.'); return; }
+    l.cands = c; l.sku = null; l.co = ''; refreshLine(l); touch(); render(); return; }
+  if (D.manualprod) { customProduct(D.manualprod); return; }
+  if (D.price) { const l = lineById(D.price); if (!l) return;
+    const v = prompt('Selling price in TT$ for\n' + (l.name || l.text) + '\n\n(The Lightspeed price stays on record — a manual price applies to this order only.)', l.priceC ? (l.priceC / 100).toFixed(2) : '');
+    if (v === null) return;
+    const f = parseFloat(v);
+    if (isNaN(f) || f < 0) { alert('That is not a price.'); return; }
+    l.priceC = Math.round(f * 100); l.priceSrc = l.priceC ? 'manual' : 'none'; touch(); render(); return; }
+  if (D.disc) { const l = lineById(D.disc); if (!l) return;
+    const v = prompt('Discount in TT$ off this line — 0 for none:', l.discC ? (l.discC / 100).toFixed(2) : '0');
+    if (v === null) return;
+    const f = parseFloat(v);
+    if (isNaN(f) || f < 0) return;
+    l.discC = Math.round(f * 100); touch(); render(); return; }
+  if (D.rot) { rotatePage(+D.rot); return; }
+  if (D.retake) { VIEW.retake = +D.retake; document.getElementById('cam').click(); return; }
+  if (D.up) { movePage(+D.up, -1); return; }
+  if (D.down) { movePage(+D.down, 1); return; }
+  if (D.drop) { if (confirm('Remove page ' + (+D.drop + 1) + '?')) dropPage(+D.drop); return; }
+  if (D.pdf) {
+    const which = D.pdf === 'preview' ? 'BOTH' : D.pdf.replace('-letter', '');
+    const paper = D.pdf.endsWith('-letter') ? 'letter' : 'a4';
+    t.disabled = true;
+    setTimeout(async () => {   // let the pressed state paint before the work starts
+      try {
+        if (D.pdf === 'preview') {
+          const blob = pdfBlob('BOTH', 'a4');
+          const url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } else {
+          const name = await savePdf(which, paper);
+          flashSaved(); toastUndo('Saved ' + name, null);
+        }
+      } finally { t.disabled = false; render(); }
+    }, 30);
+    return;
+  }
+  if (D.co != null) { SEARCHCO = D.co; render(); return; }
+  if (D.cat != null) { CATF = D.cat; render(); return; }
+  if (D.dup) { const o = orders[D.dup]; if (!o) return;
+    ORDER = blankOrder(); ORDER.customer = { ...o.customer }; ORDER.notes = o.notes || '';
+    ORDER.lines = (o.lines || []).filter(l => !l.blank).map(l => ({ ...l, id: 'l' + Math.random().toString(36).slice(2, 8) }));
+    ORDER.mode = 'manual'; VIEW.tab = 'new'; VIEW.sub = 'manual'; touch(); render(); return; }
+  if (D.del) { if (!confirm('Delete this order? Its photographs are removed from the phone too.')) return;
+    const o = orders[D.del];
+    for (const p of (o.pages || [])) idb.del('photos', p.id);
+    delete orders[D.del]; SAVE('orders', orders); if (ORDER && ORDER.id === D.del) ORDER = null; render(); return; }
+  if (D.theme) { settings.theme = D.theme; SAVE('settings', settings); applyTheme(); render(); return; }
+  if (D.delmanual != null) { manualProducts.splice(+D.delmanual, 1); SAVE('manualprods', manualProducts); render(); return; }
+});
+
+/* inputs that change the order */
+document.addEventListener('change', e => {
+  const t = e.target, D = t.dataset;
+  if (D.text) { const l = lineById(D.text); if (!l) return;
+    l.text = t.value; l.readConf = 'clear';
+    l.cands = searchProducts(l.text, { history: historyFor(ORDER.customer.name), limit: 3 });
+    l.sku = null; l.co = ''; refreshLine(l); touch(); render(); return; }
+  if (D.setqty) { const l = lineById(D.setqty); if (!l) return;
+    const n = parseInt(t.value, 10);
+    l.qty = isNaN(n) || n < 0 ? null : n; refreshLine(l); touch(); render(); return; }
+  if (D.unit) { const l = lineById(D.unit); if (!l) return;
+    l.unit = t.value;
+    const p = l.sku ? productOf(l) : null;
+    if (p) { const useCase = (l.unit === 'case' || l.unit === 'carton') && p.cp > 0;
+      if (l.priceSrc !== 'manual') { l.priceC = Math.round((useCase ? p.cp : p.price) * 100) || 0; l.priceSrc = l.priceC ? 'lightspeed' : 'none'; } }
+    touch(); render(); return; }
+  if (D.ord) { ORDER[D.ord] = t.value; touch(); return; }
+  if (D.set) { settings[D.set] = D.set === 'haptics' ? !!t.value : t.value; SAVE('settings', settings); touch(); return; }
+  if (t.id === 'cam' || t.id === 'lib') {
+    const files = [...t.files]; t.value = '';
+    if (!files.length) return;
+    const replace = VIEW.retake != null ? VIEW.retake : null; VIEW.retake = null;
+    if (!ORDER) { ORDER = blankOrder(); VIEW.tab = 'new'; }
+    VIEW.sub = 'photo';
+    addPages(files, replace);
+    return;
+  }
+  if (t.id === 'restorefile') {
+    const f = t.files[0]; t.value = '';
+    if (!f) return;
+    f.text().then(restoreFrom);
+  }
+});
+
+function editCustomer() {
+  const C = ORDER.customer;
+  const name = prompt('Shop name:', C.name || ''); if (name === null) return; C.name = name.trim();
+  const trading = prompt('Trading name, if different:', C.trading || ''); if (trading !== null) C.trading = trading.trim();
+  const contact = prompt('Contact person:', C.contact || ''); if (contact !== null) C.contact = contact.trim();
+  const phone = prompt('Phone:', C.phone || ''); if (phone !== null) C.phone = phone.trim();
+  const address = prompt('Address:', C.address || ''); if (address !== null) C.address = address.trim();
+  const area = prompt('Area or town:', C.area || ''); if (area !== null) C.area = area.trim();
+  touch(); render();
+}
+function pickCustomer(i) {
+  const c = CUST[i]; if (!c) return;
+  const C = ORDER.customer;
+  C.custIndex = i; C.manual = false;
+  C.name = c.n; C.phone = C.phone || c.p; C.address = C.address || c.ad;
+  C.area = C.area || c.t; C.contact = C.contact || c.contact || '';
+  ORDER.custChoices = null;
+  touch(); render();
+}
+const LIVE_URLS = new Set();   // blob URLs made by THIS page context only
+async function rehydratePages() {
+  for (const p of ORDER.pages || []) {
+    if (p.thumbUrl && LIVE_URLS.has(p.thumbUrl)) continue;   // a stale one from before a refresh never counts
+    const rec = await idb.get('photos', p.id);
+    p.thumbUrl = rec ? URL.createObjectURL(rec.clean) : '';
+    if (p.thumbUrl) LIVE_URLS.add(p.thumbUrl);
+    p.state = rec ? 'ready' : 'failed';
+  }
+  render();
+}
+
+/* small undo toast */
+let toastT = null;
+function toastUndo(msg, undo) {
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav-h) + 10px);z-index:50;background:var(--ink);color:#F0ECE4;padding:10px 14px;border-radius:8px;display:flex;gap:12px;align-items:center;font-size:14px;box-shadow:0 3px 0 rgba(0,0,0,.4)';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = esc(msg) + (undo ? ' <button style="all:unset;color:var(--tang-2);font-weight:700;cursor:pointer;min-height:32px;padding:0 6px">UNDO</button>' : '');
+  if (undo) el.querySelector('button').onclick = () => { undo(); el.remove(); };
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.remove(), 4200);
+}
+
+function applyTheme() {
+  const t = settings.theme || 'system';
+  if (t === 'system') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.setAttribute('data-theme', t);
+}
+
+/* ------------------------------------------------------------------ boot -- */
+applyTheme();
+(function boot() {
+  const res = LS('resume', null);
+  if (res && res.id && orders[res.id] && Date.now() - (res.at || 0) < 3 * 86400000) {
+    const o = orders[res.id];
+    if (o.status === 'Draft' && ((o.lines || []).length || (o.pages || []).length)) {
+      ORDER = o;
+      VIEW.tab = 'new';
+      VIEW.sub = res.sub || (o.read && !o.reviewed ? 'review' : o.pages.length && !o.lines.length ? 'photo' : 'manual');
+      rehydratePages();
+      render();
+      toastUndo('Continuing where you left off', null);
+      window.__BOOT_OK = true;
+      return;
+    }
+  }
+  render();
+  window.__BOOT_OK = true;
+})();
+if ('serviceWorker' in navigator) addEventListener('load', () => { try { navigator.serviceWorker.register('sw.js'); } catch (_) {} });
+
+/* If another context (an old tab finishing a read after a refresh) saves this
+   order, adopt the newer copy rather than sitting on a stale one. */
+addEventListener('storage', e => {
+  if (e.key !== K('orders')) return;
+  let fresh; try { fresh = JSON.parse(e.newValue || '{}'); } catch (_) { return; }
+  for (const id in fresh) if (!ORDER || id !== ORDER.id) orders[id] = fresh[id];
+  if (ORDER && fresh[ORDER.id] && !savePending) {
+    const inc = fresh[ORDER.id];
+    const richer = (inc.lines || []).length > (ORDER.lines || []).length || (!!inc.read && !ORDER.read);
+    if (richer) {
+      ORDER = inc; orders[ORDER.id] = inc;
+      VIEW.sub = inc.read && !inc.reviewed ? 'review' : VIEW.sub;
+      rehydratePages();
+      toastUndo('This order was updated from another window', null);
+    }
+  }
+  render();
+});
+</script>
+<script>
+setTimeout(function(){
+ if(window.__BOOT_OK)return;
+ document.getElementById('app').innerHTML=
+  '<div class="empty"><h2>Bill Maker</h2><p>The app did not open normally. Your saved orders are safe.</p>'+
+  '<p><button class="btn" onclick="location.reload()">Try again</button> '+
+  '<button class="btn quiet" onclick="(async function(){if(navigator.serviceWorker){var r=await navigator.serviceWorker.getRegistrations();for(var x of r)await x.unregister()}if(window.caches)for(var k of await caches.keys())await caches.delete(k);location.reload()})()">Repair app</button></p></div>';
+},15000);
+</script>
+</body></html>
