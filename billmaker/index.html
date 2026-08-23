@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bill Maker">
 <meta name="theme-color" content="#2E6A53">
-<meta name="x-build" content="1787500559">
+<meta name="x-build" content="1787503249">
 <style>/* Bill Maker — visual system.
    Deep ink, warm porcelain, mineral green, burnt tangerine, muted brick.
    No gradients. No glass. No emoji. One spacing scale, one type scale,
@@ -226,10 +226,7 @@ nav.tabs button:active{background:var(--surface-2)}
 .line.blank{opacity:.62;border-left-color:var(--text-3)}
 .line-head{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-bottom:var(--s2)}
 .line-head .idx{font-weight:700;color:var(--text-3);font-variant-numeric:tabular-nums}
-.crop{display:block;width:100%;height:56px;overflow:hidden;border-radius:var(--r-sm);
-  border:1px solid var(--line-soft);background:#fff;margin-bottom:var(--s2);
-  padding:0;cursor:zoom-in}
-.crop img{display:block;transform-origin:0 0}
+/* (v1 fixed-window strip retired — see the v2 .crop/.photo rules at the end) */
 .cands{display:grid;gap:var(--s2);margin-top:var(--s2)}
 .cand{display:block;width:100%;text-align:left;padding:var(--s3);font:inherit;color:var(--text);
   background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-md);
@@ -265,6 +262,35 @@ nav.tabs button:active{background:var(--surface-2)}
 .empty{text-align:center;padding:var(--s7) var(--s4);color:var(--text-2)}
 .empty svg{width:40px;height:40px;color:var(--text-3);margin-bottom:var(--s3)}
 @media print{nav.tabs,.topbar,.btn,.viewer{display:none!important}}
+
+/* ---- v2: the photograph is always shown COMPLETE, contain, never cover ---- */
+.photo{display:block;width:100%;padding:0;margin:0;cursor:zoom-in;
+ background:#fff;border:1.5px solid var(--ink-3);border-radius:var(--r-md);overflow:hidden}
+.photo img{display:block;width:100%;height:auto;max-height:72dvh;object-fit:contain;background:#fff}
+.crop{display:block;width:100%;height:72px;overflow:hidden;border-radius:var(--r-sm);
+ border:1px solid var(--line-soft);background:#fff;margin-bottom:var(--s2);padding:0;cursor:zoom-in;position:relative}
+.crop img{display:block;position:relative}
+.viewer .pane{touch-action:none;position:relative;background:#171a1d;border-radius:var(--r-sm)}
+.viewer img{border:2px solid var(--tang);border-radius:2px;background:#fff}
+.cropwrap{position:relative;flex:1;align-self:center;max-width:100%;overflow:hidden;
+ display:flex;align-items:center;justify-content:center}
+.cropwrap img{max-width:100%;max-height:78dvh;object-fit:contain;border:2px solid #667}
+.cropbox{position:absolute;border:2px dashed var(--tang);background:rgba(190,87,28,.08)}
+.handle{position:absolute;width:34px;height:34px;border-radius:50%;background:var(--tang);
+ border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+.handle.nw{left:-17px;top:-17px}.handle.ne{right:-17px;top:-17px}
+.handle.sw{left:-17px;bottom:-17px}.handle.se{right:-17px;bottom:-17px}
+.line-tools{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s2)}
+
+/* v2 phone sizing: nothing tiny, nothing hidden */
+nav.tabs button{min-height:64px;font-size:12px;gap:4px}
+nav.tabs button svg{width:24px;height:24px}
+.qin{width:92px;font-size:17px}
+.stepper button{font-size:22px}
+.tag{font-size:11.5px}
+.row .sub{font-size:14px}
+.hint{font-size:14px}
+input,select,textarea{font-size:16px}
 </style></head><body>
 <div id="app"><div class="empty" style="padding-top:40vh">Opening…</div></div>
 <script src="billdata-618d01744d.js"></script>
@@ -274,7 +300,7 @@ nav.tabs button:active{background:var(--surface-2)}
    ========================================================================= */
 'use strict';
 
-const APP_VER = '1.0.0';
+const APP_VER = '2.0.0';
 const K = s => 'bm_' + s;                       // its own local-storage prefix
 const DATA = window.__BM__;                     // {checked, products[], customers[]}
 const PROD = DATA.products, CUST = DATA.customers;
@@ -715,14 +741,16 @@ function worker() {
   imgWorker.onerror = () => { imgWorker = null; };
   return imgWorker;
 }
-function processImage(blob, opts) {
+function workerCall(op, blob, opts) {
   return new Promise((res, rej) => {
     const id = ++workerSeq;
     workerJobs.set(id, { res, rej });
-    try { worker().postMessage({ id, blob, opts: opts || null }); }
+    try { worker().postMessage({ id, op, blob, opts: opts || null }); }
     catch (e) { workerJobs.delete(id); rej(e); }
   });
 }
+const processImage = (blob, opts) => workerCall('prepare', blob, opts);
+const makeTiles = (blob, crop) => workerCall('tiles', blob, { crop: crop || null });
 
 async function addPages(files, replaceIndex) {
   if (!ORDER) ORDER = blankOrder();
@@ -739,14 +767,21 @@ async function addPages(files, replaceIndex) {
       const r = await processImage(f, null);
       const dup = ORDER.pages.find(p => p !== page && p.hash && r.hash &&
         p.hash.split('').filter((ch, i) => ch !== r.hash[i]).length <= 4);
-      await idb.put('photos', page.id, { original: f, clean: r.clean, at: new Date().toISOString(), order: ORDER.id });
+      // The original is stored untouched. Both reading copies are the FULL
+      // frame - nothing is ever cropped automatically (the v1 failure).
+      await idb.put('photos', page.id, { original: f, color: r.colorFull,
+        enhanced: r.enhancedFull, at: new Date().toISOString(), order: ORDER.id });
       URL.revokeObjectURL(page.thumbUrl);
       const tu = URL.createObjectURL(r.thumb);
       if (typeof LIVE_URLS !== 'undefined') LIVE_URLS.add(tu);
       Object.assign(page, { state: dup ? 'duplicate' : 'ready', w: r.w, h: r.h,
-        deskew: r.deskew, hash: r.hash, thumbUrl: tu, dupOf: dup ? dup.id : null });
+        deskew: r.deskew, hash: r.hash, bands: r.bands || [], warnings: r.warnings || [],
+        crop: null, turn: r.turn || 0, thumbUrl: tu, dupOf: dup ? dup.id : null });
     } catch (e) {
-      page.state = 'failed'; page.error = String(e.message || e);
+      page.state = 'failed';
+      page.error = /image|decode|bitmap/i.test(String(e.message || e))
+        ? 'This photograph could not be opened. Take it again, or choose a JPEG copy.'
+        : String(e.message || e);
     }
     setStage(''); render(); touch();
   }
@@ -756,11 +791,12 @@ async function rotatePage(i) {
   const rec = await idb.get('photos', p.id); if (!rec) return;
   p.state = 'working'; p.turn = ((p.turn || 0) + 90) % 360; render();
   const r = await processImage(rec.original, { rotate: p.turn });
-  await idb.put('photos', p.id, { ...rec, clean: r.clean });
+  await idb.put('photos', p.id, { ...rec, color: r.colorFull, enhanced: r.enhancedFull });
   URL.revokeObjectURL(p.thumbUrl);
   const tu2 = URL.createObjectURL(r.thumb);
   if (typeof LIVE_URLS !== 'undefined') LIVE_URLS.add(tu2);
-  Object.assign(p, { state: 'ready', w: r.w, h: r.h, thumbUrl: tu2 });
+  Object.assign(p, { state: 'ready', w: r.w, h: r.h, bands: r.bands || [],
+    warnings: r.warnings || [], thumbUrl: tu2 });
   render(); touch();
 }
 async function dropPage(i) {
@@ -783,69 +819,218 @@ const readerUrl = () => (settings.reader || '').trim() || DEFAULT_READER;
 const blobToB64 = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(String(f.result).split(',')[1]); f.readAsDataURL(b); });
 
 let readError = '';
+let stageDetail = '';
+function setDetail(t) { stageDetail = t; const el = document.getElementById('stagedetail'); if (el) el.textContent = t; }
+
+async function callReader(images, mode) {
+  const res = await fetch(readerUrl(), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ images, mode: mode || 'page' }),
+  });
+  if (!res.ok) throw new Error(
+    res.status === 429 ? 'busy'
+    : (res.status === 404 || res.status === 405) ? 'The reading service is not set up yet. Open Settings and check its address. You can build this order by hand in the meantime.'
+    : 'The reading service replied ' + res.status + '.');
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+
+/* Read one page completely: the whole page first, then overlapping close-up
+   sections, merged by position and wording. A section that fails is recorded
+   and can be retried on its own - never the whole page again. */
+async function readOnePage(pageIdx) {
+  const page = ORDER.pages[pageIdx];
+  const rec = await idb.get('photos', page.id);
+  if (!rec) throw new Error('Page ' + (pageIdx + 1) + ' is missing from this phone. Photograph it again.');
+  const label = 'Page ' + (pageIdx + 1) + ' of ' + ORDER.pages.length;
+
+  setStage('reading'); setDetail(label + ' — whole page');
+  const full = await callReader([await blobToB64(rec.enhanced)], 'page');
+
+  setDetail(label + ' — preparing close-ups');
+  const { tiles } = await makeTiles(rec.enhanced, page.crop);
+  const sections = [];
+  for (let t = 0; t < tiles.length; t++) {
+    setDetail(label + ' — close-up ' + (t + 1) + ' of ' + tiles.length);
+    try {
+      const r = await callReader([await blobToB64(tiles[t].blob)], 'section');
+      sections.push({ rect: tiles[t].rect, lines: r.lines || [], customer: r.customer || null, ok: true });
+    } catch (e) {
+      sections.push({ rect: tiles[t].rect, lines: [], ok: false, err: String(e.message || e) });
+    }
+  }
+  return { full, sections, page: pageIdx };
+}
+
+/* Map a section-relative box back onto the page. */
+function sectionBox(box, rect) {
+  if (!box) return null;
+  const w = rect.x1 - rect.x0, h = rect.y1 - rect.y0;
+  return [rect.x0 + box[0] * w, rect.y0 + box[1] * h, rect.x0 + box[2] * w, rect.y0 + box[3] * h];
+}
+const midY = b => b ? (b[1] + b[3]) / 2 : null;
+const textSim = (a, b) => dice(keyToks(a).join(''), keyToks(b).join(''));
+
+/* Merge the whole-page result with every close-up section.
+   - a close-up line that matches a whole-page line confirms it (qty conflicts flagged)
+   - a close-up line nothing matches is ADDED, flagged for review
+   - handwriting bands with no line at all become COULD NOT READ placeholders */
+function mergePage(result, hist) {
+  const base = (result.full.lines || []).map(l => ({ src: l, page: result.page,
+    box: l.box || null, seen: 0 }));
+  const extras = [];
+  for (const sec of result.sections) {
+    if (!sec.ok) continue;
+    for (const sl of sec.lines) {
+      const box = sectionBox(sl.box, sec.rect);
+      const my = midY(box);
+      let hit = null, bestScore = 0;
+      for (const b of base) {
+        const by = midY(b.box);
+        const near = my != null && by != null && Math.abs(my - by) < 0.035;
+        const sim = textSim(sl.text || '', b.src.text || '');
+        const score = (near ? 0.5 : 0) + sim;
+        if ((near || sim >= 0.72) && score > bestScore) { bestScore = score; hit = b; }
+      }
+      if (hit) {
+        hit.seen++;
+        if (sl.qty != null && hit.src.qty != null && sl.qty !== hit.src.qty) hit.qtyConflict = sl.qty;
+        if (sl.qty != null && hit.src.qty == null) hit.src.qty = sl.qty;
+        if ((sl.c === 'clear') && hit.src.c !== 'clear' && sl.text) { hit.src.text = sl.text; hit.src.c = 'clear'; }
+      } else if ((sl.text || '').trim() && sl.c !== 'unreadable') {
+        // seen only up close - real writing the whole-page pass missed
+        extras.push({ src: sl, page: result.page, box, fromCloseup: true });
+      }
+    }
+  }
+  const lines = [];
+  for (const b of base) {
+    const line = makeLine(b.src, hist);
+    line.page = result.page; line.box = b.box;
+    if (b.qtyConflict != null) {
+      line.qty = null; line.readConf = 'unsure';
+      line.note = 'One pass read the quantity as ' + b.src.qty + ' and another as ' + b.qtyConflict + ' — type the right one.';
+      line.state = tierFor(line);
+    }
+    lines.push(line);
+  }
+  for (const ex of extras) {
+    const line = makeLine(ex.src, hist);
+    line.page = ex.page; line.box = ex.box;
+    line.closeupOnly = true;
+    if (line.state === 'OK') { line.state = 'REVIEW'; }   // never auto-confirm a line only one pass saw
+    lines.push(line);
+  }
+  // order down the page
+  lines.sort((a, b2) => (midY(a.box) ?? 2) - (midY(b2.box) ?? 2));
+
+  // completeness: every handwriting band must end up with an outcome
+  const page = ORDER.pages[result.page];
+  for (const [y0, y1] of (page.bands || [])) {
+    if (y1 - y0 < 0.014) continue;
+    const covered = lines.some(l => { const my = midY(l.box); return my != null && my >= y0 - 0.02 && my <= y1 + 0.02; });
+    if (!covered) {
+      const ph = makeLine({ raw: '', text: '', c: 'unreadable', kind: 'item' }, hist);
+      ph.page = result.page; ph.box = [0.02, y0, 0.98, y1];
+      ph.note = 'Writing was seen here but could not be read. Tap the strip, then type it or leave it blank.';
+      lines.push(ph);
+    }
+  }
+  lines.sort((a, b2) => (midY(a.box) ?? 2) - (midY(b2.box) ?? 2));
+  page.failedSections = result.sections.filter(x => !x.ok).map(x => x.rect);
+  return { lines, customer: result.full.customer || null, totals: result.full.totals || null,
+    unreadable: result.full.unreadable_regions || [], service: result.full.service };
+}
+
 async function readPages() {
   const usable = ORDER.pages.filter(p => p.state === 'ready' || p.state === 'duplicate');
-  if (!usable.length) { alert('Take a photograph of the order first.'); return; }
+  if (!usable.length) { alert('Add a photograph of the order first.'); return; }
   readError = ''; ORDER.busy = true; setStage('reading'); render();
   try {
-    const images = [];
-    for (const p of usable) {
-      const rec = await idb.get('photos', p.id);
-      if (!rec) throw new Error('Page ' + (ORDER.pages.indexOf(p) + 1) + ' is missing from this phone. Photograph it again.');
-      images.push(await blobToB64(rec.clean));
+    const hist = historyFor(ORDER.customer.name);
+    ORDER.lines = []; ORDER.read = { fields: {}, unreadable: [] }; ORDER.writtenTotal = null;
+    let service = '';
+    for (let i = 0; i < ORDER.pages.length; i++) {
+      const page = ORDER.pages[i];
+      if (!(page.state === 'ready' || page.state === 'duplicate')) continue;
+      const result = await readOnePage(i);
+      setStage('matching'); setDetail('Page ' + (i + 1) + ' — matching products');
+      const merged = mergePage(result, hist);
+      service = merged.service || service;
+      // customer: first page that says anything wins each field
+      if (merged.customer) {
+        for (const k of ['shop', 'trading', 'contact', 'phone', 'address', 'area', 'date', 'rep', 'note']) {
+          const f = merged.customer[k];
+          if (f && f.v && !(ORDER.read.fields[k] && ORDER.read.fields[k].v))
+            ORDER.read.fields[k] = { v: f.v, c: f.c || '', box: f.box || null, page: i };
+        }
+      }
+      if (merged.totals && merged.totals.grand != null && ORDER.writtenTotal == null)
+        ORDER.writtenTotal = Math.round(merged.totals.grand * 100);
+      ORDER.read.unreadable.push(...(merged.unreadable || []));
+      ORDER.lines.push(...merged.lines);
+      render(); await new Promise(r => setTimeout(r, 0));   // lines appear page by page
     }
-    const res = await fetch(readerUrl(), {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ images }),
-    });
-    if (!res.ok) throw new Error(
-      res.status === 429 ? 'The reading service is busy. Wait a moment and tap Read the order again — your photograph is saved.'
-      : (res.status === 404 || res.status === 405) ? 'No reading service is set up yet. Open Settings and enter its address. You can build this order by hand in the meantime.'
-      : 'The reading service replied ' + res.status + '. Your photograph is saved; try again, or build the order by hand.');
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    ORDER.readService = data.service || 'reading service';
+    ['shop', 'trading', 'contact', 'phone', 'address', 'area', 'date', 'rep', 'note']
+      .forEach(k => { if (!ORDER.read.fields[k]) ORDER.read.fields[k] = { v: '', c: '', box: null, page: 0 }; });
+    ORDER.readService = service || 'reading service';
     ORDER.readAt = new Date().toISOString();
-    setStage('matching');
-    await applyRead(data);
-    ORDER.busy = false; setStage(''); VIEW.sub = 'review'; render(); touch();
+    ORDER.custChoices = matchCustomerFromPage(ORDER.read.fields);
+    const C = ORDER.customer, F = ORDER.read.fields;
+    if (!C.name && F.shop.v && F.shop.c !== 'unreadable') C.name = F.shop.v;
+    if (!C.trading && F.trading.v) C.trading = F.trading.v;
+    if (!C.contact && F.contact.v) C.contact = F.contact.v;
+    if (!C.phone && F.phone.v) C.phone = F.phone.v;
+    if (!C.address && F.address.v) C.address = F.address.v;
+    if (!C.area && F.area.v) C.area = F.area.v;
+    if (F.note.v && (ORDER.notes || '').indexOf(F.note.v) < 0)
+      ORDER.notes = (ORDER.notes ? ORDER.notes + '\n' : '') + F.note.v;
+    if (F.rep.v && !ORDER.rep) ORDER.rep = F.rep.v;
+    snapshotLines();
+    ORDER.busy = false; setStage(''); setDetail(''); VIEW.sub = 'review'; render(); touch();
   } catch (e) {
-    ORDER.busy = false; setStage('');
-    readError = navigator.onLine ? String(e.message || e)
-      : 'No internet. The photograph and everything typed so far are saved on this phone. Tap Read the order again when you have signal — nothing is lost. You can build this order by hand right now.';
+    ORDER.busy = false; setStage(''); setDetail('');
+    const msg = String(e.message || e);
+    readError = !navigator.onLine
+      ? 'No internet. The photograph and everything typed so far are saved on this phone. Tap Read the order again when you have signal — nothing is lost. You can build this order by hand right now.'
+      : msg === 'busy' ? 'The reading service is busy right now. Wait a moment and tap Read the order again — your photograph is saved.'
+      : msg;
     render(); touch();
   }
 }
 
-/* Lines appear as they are matched rather than all at the end, so a long order
-   starts filling the review screen straight away. */
-async function applyRead(data) {
-  const cu = data.customer || {};
-  const val = k => (cu[k] || {}).v || '', conf = k => (cu[k] || {}).c || '';
-  ORDER.read = { fields: {}, unreadable: data.unreadable_regions || [] };
-  ['shop', 'trading', 'contact', 'phone', 'address', 'area', 'date', 'rep', 'note']
-    .forEach(k => { ORDER.read.fields[k] = { v: val(k), c: conf(k), box: (cu[k] || {}).box || null }; });
-  ORDER.custChoices = matchCustomerFromPage(ORDER.read.fields);
-
-  const C = ORDER.customer;
-  if (!C.name && val('shop') && conf('shop') !== 'unreadable') C.name = val('shop');
-  if (!C.trading && val('trading')) C.trading = val('trading');
-  if (!C.contact && val('contact')) C.contact = val('contact');
-  if (!C.phone && val('phone')) C.phone = val('phone');
-  if (!C.address && val('address')) C.address = val('address');
-  if (!C.area && val('area')) C.area = val('area');
-  if (val('note')) ORDER.notes = (ORDER.notes ? ORDER.notes + '\n' : '') + val('note');
-  if (val('rep') && !ORDER.rep) ORDER.rep = val('rep');
-
-  const hist = historyFor(C.name);
-  ORDER.lines = [];
-  const raw = data.lines || [];
-  for (let i = 0; i < raw.length; i++) {
-    ORDER.lines.push(makeLine(raw[i], hist));
-    if (i % 4 === 3) { render(); await new Promise(r => setTimeout(r, 0)); }   // keep the screen alive
+/* retry only the close-up sections that failed on a page */
+async function retrySections(pageIdx) {
+  const page = ORDER.pages[pageIdx];
+  if (!page || !(page.failedSections || []).length) return;
+  const rec = await idb.get('photos', page.id);
+  if (!rec) return alert('That photograph is no longer on this phone.');
+  ORDER.busy = true; setStage('reading'); render();
+  const hist = historyFor(ORDER.customer.name);
+  const still = [];
+  for (let i = 0; i < page.failedSections.length; i++) {
+    const rect = page.failedSections[i];
+    setDetail('Close-up ' + (i + 1) + ' of ' + page.failedSections.length + ' — trying again');
+    try {
+      const { tiles } = await makeTiles(rec.enhanced, { x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1 });
+      const r = await callReader([await blobToB64(tiles[0] ? tiles[0].blob : rec.enhanced)], 'section');
+      for (const sl of (r.lines || [])) {
+        const box = sectionBox(sl.box, rect);
+        const my = midY(box);
+        const dupe = ORDER.lines.some(l => l.page === pageIdx && ((midY(l.box) != null && my != null && Math.abs(midY(l.box) - my) < 0.03) || textSim(sl.text || '', l.text) >= 0.72));
+        if (!dupe && (sl.text || '').trim()) {
+          const line = makeLine(sl, hist);
+          line.page = pageIdx; line.box = box; line.closeupOnly = true;
+          if (line.state === 'OK') line.state = 'REVIEW';
+          ORDER.lines.push(line);
+        }
+      }
+    } catch (e) { still.push(rect); }
   }
-  setStage('pricing'); render();
-  await new Promise(r => setTimeout(r, 0));
-  setStage('review');
+  page.failedSections = still;
+  ORDER.lines.sort((a, b) => (a.page - b.page) || ((midY(a.box) ?? 2) - (midY(b.box) ?? 2)));
+  ORDER.busy = false; setStage(''); setDetail(''); snapshotLines(); render(); touch();
 }
 
 function makeLine(l, hist) {
@@ -860,6 +1045,7 @@ function makeLine(l, hist) {
     kind: l.kind === 'assortment' ? 'assortment' : 'item',
     ditto: !!l.ditto, grouped: !!l.grouped, readConf: l.c || 'unsure',
     page: l.page != null ? l.page : 0, box: l.box || null,
+    note: l.note || '',
     sku: null, co: '', name: '', priceC: 0, priceSrc: 'none', discC: 0,
     blank: false, custom: false, cands: [],
   };
@@ -899,6 +1085,24 @@ function applyProduct(line, key, silent) {
     const at = recents.indexOf(rk); if (at >= 0) recents.splice(at, 1);
     recents.unshift(rk); if (recents.length > 40) recents.length = 40; SAVE('recents', recents);
   }
+}
+
+/* ---------------- undo / redo (line list snapshots, capped) ---------------- */
+let UNDO = [], REDO = [];
+function snapshotLines() {
+  try { UNDO.push(JSON.stringify(ORDER.lines)); if (UNDO.length > 25) UNDO.shift(); REDO = []; } catch (_) {}
+}
+function undoLines() {
+  if (UNDO.length < 2) return;
+  REDO.push(UNDO.pop());
+  ORDER.lines = JSON.parse(UNDO[UNDO.length - 1]);
+  touch(); render();
+}
+function redoLines() {
+  if (!REDO.length) return;
+  const s2 = REDO.pop(); UNDO.push(s2);
+  ORDER.lines = JSON.parse(s2);
+  touch(); render();
 }
 
 const lineTotal = l => l.blank ? 0 : Math.max(0, (l.qty || 0) * l.priceC - (l.discC || 0));
@@ -1208,22 +1412,20 @@ const pageUrl = i => (ORDER.pages[i] || {}).thumbUrl || '';
 /* Show the exact strip of the photograph a line was read from. The thumbnail is
    scaled so the reader's box fills the strip, which is why tapping a line shows
    the writing it came from rather than the whole page. */
-function cropStyle(box, pageIdx, stripW, stripH) {
-  const p = ORDER.pages[pageIdx || 0];
-  if (!p || !box || !p.w) return null;
-  const [x0, y0, x1, y1] = box;
-  const bw = Math.max(0.02, x1 - x0), bh = Math.max(0.012, y1 - y0);
-  const scale = Math.min(stripW / (bw * p.w), stripH / (bh * p.h)) * (p.w / p.w);
-  const k = Math.max(scale, stripW / (bw * p.w));
-  return `width:${(p.w * k).toFixed(1)}px;height:auto;transform:translate(${(-x0 * p.w * k).toFixed(1)}px,${(-y0 * p.h * k).toFixed(1)}px)`;
-}
-function cropHTML(line, idx) {
-  if (!line.box || !ORDER.pages.length) return '';
-  const st = cropStyle(line.box, line.page, 320, 56);
-  if (!st) return '';
+/* The strip shows the exact writing a line came from: the page image scaled so
+   the line's own box fills the strip width, vertically centred on the line. */
+function cropHTML(line) {
+  const p = ORDER.pages[line.page || 0];
+  if (!line.box || !p || !p.w) return '';
+  const [x0, y0, x1, y1] = line.box;
+  const bw = Math.max(0.04, x1 - x0);
+  const k = 100 / bw;                                   // % width of the strip
+  const cy = (y0 + y1) / 2;
   return `<button class="crop" data-zoom="${line.page}" data-box="${esc(JSON.stringify(line.box))}"
-    aria-label="Show this line on the photograph">
-    <img src="${pageUrl(line.page)}" style="${st}" alt=""></button>`;
+    aria-label="Show this handwriting on the photograph">
+    <img src="${pageUrl(line.page)}" alt=""
+     style="width:${k.toFixed(1)}%;transform:translate(${(-x0 * k).toFixed(2)}%, calc(36px - ${(cy * k * (p.h / p.w)).toFixed(2)}%))">
+  </button>`;
 }
 
 /* ------------------------------------------------------------ New Order -- */
@@ -1236,14 +1438,14 @@ function vNewOrder() {
   <div class="screen">
     <button class="choice accent" data-act="startPhoto">
       ${ico('camera')}
-      <span class="ttl">Photograph order</span>
-      <span class="sub">Take a picture of the written page. It is cleaned up, read, matched to the catalogue and shown to you to check before anything is used.</span>
+      <span class="ttl">Take a photo</span>
+      <span class="sub">Photograph a handwritten order. The app reads it and shows you everything to check before the PDF.</span>
     </button>
     <div style="height:var(--s3)"></div>
     <button class="choice" data-act="startManual">
       ${ico('pen')}
       <span class="ttl">Create manually</span>
-      <span class="sub">Search the catalogue and build the order yourself. Works with no internet.</span>
+      <span class="sub">Build an order by typing. Works with no internet.</span>
     </button>
 
     ${drafts.length ? `<div class="card" style="margin-top:var(--s5)">
@@ -1280,36 +1482,38 @@ function vPhoto() {
       <button class="btn quiet" data-act="pick">Choose a photo</button>
     </div>
 
-    ${P.length ? `<div class="card" style="margin-top:var(--s4)">
-      <div class="eyebrow">Pages — ${P.length}</div>
-      <ul class="list">${P.map((p, i) => `<li class="row" style="align-items:flex-start">
-        <button class="crop" style="width:64px;height:84px;flex:0 0 64px;margin:0" data-zoom="${i}" aria-label="Open page ${i + 1}">
-          ${p.thumbUrl ? `<img src="${p.thumbUrl}" style="width:64px;height:auto" alt="">` : ''}</button>
-        <span class="grow">
-          <span class="nm">Page ${i + 1}</span>
-          <span class="sub">${p.state === 'working' ? 'Cleaning up…'
-            : p.state === 'failed' ? '<span style="color:var(--brick-2)">Could not prepare — take it again</span>'
-            : p.state === 'duplicate' ? '<span style="color:var(--tang-2)">Looks like a page already added</span>'
-            : `Ready${p.deskew ? ' · straightened ' + p.deskew + '°' : ''}`}</span>
-          <span class="btn-row" style="margin-top:var(--s2)">
-            <button class="btn quiet sm" data-rot="${i}">${ico('rotate')} Rotate</button>
-            <button class="btn quiet sm" data-retake="${i}">Retake</button>
-            <button class="btn quiet sm" data-up="${i}" ${i === 0 ? 'disabled' : ''}>Up</button>
-            <button class="btn quiet sm" data-down="${i}" ${i === P.length - 1 ? 'disabled' : ''}>Down</button>
-            <button class="btn quiet sm" data-drop="${i}">${ico('trash')}</button>
-          </span>
-        </span></li>`).join('')}</ul>
-    </div>` : `<p class="hint" style="margin-top:var(--s4)">Hold the page flat and fill the frame. Several pages are fine — take them in order.</p>`}
+    ${P.length ? P.map((p, i) => `<div class="card" style="margin-top:var(--s4)">
+      <div class="eyebrow">Page ${i + 1} of ${P.length}</div>
+      <button class="photo" data-zoom="${i}" aria-label="Open page ${i + 1} full size — pinch to zoom">
+        ${p.thumbUrl ? `<img src="${p.thumbUrl}" alt="Page ${i + 1}, complete photograph">` : ''}
+      </button>
+      <p class="hint" style="margin:var(--s2) 0 0">${p.state === 'working' ? 'Cleaning up a copy — the original is kept exactly as taken…'
+        : p.state === 'failed' ? '<span style="color:var(--brick-2)">' + esc(p.error || 'Could not prepare — take it again') + '</span>'
+        : p.state === 'duplicate' ? '<span style="color:var(--tang-2)">This looks like a page you already added.</span>'
+        : 'The complete photograph, edge to edge. Tap it to zoom in and check every corner.'}</p>
+      ${(p.warnings || []).map(w2 => `<p class="hint" style="color:var(--tang-2);margin:var(--s1) 0 0">${esc(w2)}</p>`).join('')}
+      ${p.crop ? `<p class="hint" style="color:var(--tang-2)">Close-up reading uses your marked area. The whole page is still read and kept.</p>` : ''}
+      <div class="btn-row" style="margin-top:var(--s3)">
+        <button class="btn quiet sm" data-rot="${i}">${ico('rotate')} Rotate</button>
+        <button class="btn quiet sm" data-cropedit="${i}">${ico('crop')} Mark the paper</button>
+        <button class="btn quiet sm" data-retake="${i}">Retake</button>
+        ${P.length > 1 ? `<button class="btn quiet sm" data-up="${i}" ${i === 0 ? 'disabled' : ''}>Move up</button>
+        <button class="btn quiet sm" data-down="${i}" ${i === P.length - 1 ? 'disabled' : ''}>Move down</button>` : ''}
+        <button class="btn quiet sm" data-drop="${i}">${ico('trash')} Remove</button>
+      </div>
+    </div>`).join('') : `<p class="hint" style="margin-top:var(--s4)">Hold the page flat and fill the frame. Several pages are fine — take them in order.</p>`}
 
-    ${busy ? `<div class="card"><div class="eyebrow">Working</div><ul class="stages" id="stages"></ul></div>` : ''}
+    ${busy ? `<div class="card"><div class="eyebrow">Working</div><ul class="stages" id="stages"></ul>
+      <p class="hint" id="stagedetail" style="margin:var(--s2) 0 0">${esc(typeof stageDetail !== 'undefined' ? stageDetail : '')}</p></div>` : ''}
     ${readError ? `<div class="card" style="border-color:var(--brick)">
       <div class="tag bad">${ico('alert')} Could not read</div>
       <p style="margin-top:var(--s2)">${esc(readError)}</p>
       <div class="btn-row"><button class="btn quiet" data-act="goSettings">Open settings</button>
       <button class="btn quiet" data-act="startManual">Build it by hand</button></div></div>` : ''}
 
-    ${usable && !busy ? `<button class="btn primary wide" data-act="read" style="margin-top:var(--s4)">Read the order</button>` : ''}
-    <p class="hint">The photograph stays in this app on this phone. It is sent once to the reading service to be read, and never goes into the published app files.</p>
+    ${usable && !busy ? `<button class="btn primary wide" data-act="read" style="margin-top:var(--s4)">Read the order</button>
+    <button class="btn quiet wide sm" data-act="startManual" style="margin-top:var(--s2)">Type it by hand instead</button>` : ''}
+    <p class="hint">The photograph stays in this app on this phone. It is sent once to be read, and never goes into the published app files.</p>
   </div>`;
 }
 
@@ -1317,11 +1521,14 @@ function vPhoto() {
 function vReview() {
   const C = reviewCounts(), R = ORDER.read;
   const wide = window.innerWidth >= 900;
+  const failed = ORDER.pages.reduce((a, p) => a + ((p.failedSections || []).length), 0);
   const photo = ORDER.pages.length ? `<div class="card ${wide ? 'sticky' : ''}">
-      <div class="eyebrow">The photograph</div>
-      ${ORDER.pages.map((p, i) => `<button class="crop" style="height:${wide ? 420 : 150}px;width:100%" data-zoom="${i}" aria-label="Open page ${i + 1} full size">
-        ${p.thumbUrl ? `<img src="${p.thumbUrl}" style="width:100%;height:auto" alt="Page ${i + 1}">` : ''}</button>`).join('')}
-      <p class="hint">Tap to open it full size. Tap the strip above any line to see the writing it came from.</p>
+      <div class="eyebrow">The photograph — complete, edge to edge</div>
+      ${ORDER.pages.map((p, i) => `<button class="photo" data-zoom="${i}" aria-label="Open page ${i + 1} full size — pinch to zoom">
+        ${p.thumbUrl ? `<img src="${p.thumbUrl}" alt="Page ${i + 1}">` : ''}</button>`).join('')}
+      <p class="hint">Tap a page to zoom. Tap the handwriting strip on any line to jump to that exact spot.</p>
+      ${failed ? `<p class="hint" style="color:var(--tang-2)">${failed} close-up section${failed === 1 ? '' : 's'} could not be read (service busy). The whole page was still read.</p>
+      <div class="btn-row">${ORDER.pages.map((p, i) => (p.failedSections || []).length ? `<button class="btn quiet sm" data-retrysec="${i}">Try page ${i + 1} close-ups again</button>` : '').join('')}</div>` : ''}
     </div>` : '';
 
   const custCard = R ? `<div class="card">
@@ -1342,15 +1549,28 @@ function vReview() {
     ${customerChoiceHTML()}
   </div>` : '';
 
+  const idx = ORDER.lines.map((l, i) => i);
+  const rank = i => { const l = ORDER.lines[i];
+    return l.blank ? 3 : !lineReady(l) ? 0 : (l.state === 'REVIEW' || l.state === 'ASSORT' || l.ditto || l.readConf === 'unsure') ? 1 : 2; };
+  idx.sort((a, b) => rank(a) - rank(b) || a - b);
+  const T0 = totals();
+  const totalRow = ORDER.writtenTotal != null && Math.abs(ORDER.writtenTotal - T0.all) > 1 && !C.open
+    ? `<p class="hint" style="color:var(--brick-2)">TOTAL DOES NOT MATCH — PLEASE CHECK. The page has ${money(ORDER.writtenTotal)} written on it, but the lines add to ${money(T0.all)}. Neither is forced — check the lines.</p>` : '';
   const lines = `<div class="card">
-    <div class="eyebrow">Every line as written — ${C.n}</div>
-    <p class="hint" style="margin-bottom:var(--s3)">Burnt orange means check it. Brick red must be corrected, or deliberately left blank, before a PDF can be made.</p>
-    ${ORDER.lines.map((l, i) => lineHTML(l, i)).join('') || '<p class="hint">Nothing was read from the photograph.</p>'}
+    <div class="line-tools">
+      <div class="eyebrow" style="margin:0">Every line as written — ${C.n}</div>
+      <span style="flex:1"></span>
+      <button class="btn quiet sm" data-act="undo" aria-label="Undo">Undo</button>
+      <button class="btn quiet sm" data-act="redo" aria-label="Redo">Redo</button>
+    </div>
+    <p class="hint" style="margin-bottom:var(--s3)">Anything that needs you is at the top. Burnt orange means check it; brick red must be fixed or deliberately left blank before the PDF.</p>
+    ${idx.map(i => lineHTML(ORDER.lines[i], i)).join('') || '<p class="hint">Nothing was read from the photograph.</p>'}
   </div>
   <div class="card">
-    <div class="row" style="border:0"><span class="grow"><span class="nm num">${C.n} lines · ${C.red} to correct · ${C.amber} to check · ${C.blank} left blank</span></span></div>
+    <div class="row" style="border:0;cursor:default"><span class="grow"><span class="nm num">${C.n} lines · ${C.red} to fix · ${C.amber} to check · ${C.blank} left blank</span></span></div>
+    ${totalRow}
     <button class="btn primary wide" data-act="acceptReview" ${C.open ? 'disabled' : ''}>
-      ${C.open ? C.open + ' line' + (C.open === 1 ? '' : 's') + ' still need you' : 'Accept these lines'}</button>
+      ${C.open ? C.open + ' line' + (C.open === 1 ? '' : 's') + ' still need' + (C.open === 1 ? 's' : '') + ' you' : 'Ready to preview'}</button>
   </div>`;
 
   return `<div class="screen">${wide ? `<div class="split"><div>${photo}${custCard}</div><div>${lines}</div></div>`
@@ -1396,8 +1616,10 @@ function lineHTML(l, i) {
       ${l.blank ? '<span class="tag plain">Left blank by you</span>' : ''}
       <button class="btn quiet sm" style="margin-left:auto;min-height:36px" data-dropline="${l.id}" aria-label="Remove line ${i + 1}">${ico('x')}</button>
     </div>
-    ${cropHTML(l, i)}
+    ${cropHTML(l)}
     ${l.raw ? `<p class="hint" style="margin:0 0 var(--s2)">As written: <i>${esc(l.raw)}</i></p>` : ''}
+    ${l.note ? `<p class="hint" style="color:var(--tang-2);margin:0 0 var(--s2)">${esc(l.note)}</p>` : ''}
+    ${l.closeupOnly ? `<p class="hint" style="margin:0 0 var(--s2)">Found by the close-up pass — the whole-page pass missed it, so please confirm it.</p>` : ''}
     ${l.maybePrice != null ? `<p class="hint" style="color:var(--brick-2)">A number here may be a price, not a quantity: ${esc(String(l.maybePrice))}. Nothing was assumed.</p>` : ''}
     <label class="field"><span class="sr">What the line says</span>
       <input value="${esc(l.text)}" data-text="${l.id}" placeholder="What the line says"></label>
@@ -1810,31 +2032,46 @@ function render() {
       ${TABS.map(([id, label, icon]) => `<button data-tab="${id}" ${VIEW.tab === id ? 'aria-current="page"' : ''}>
         ${ico(icon)}<span>${label}</span></button>`).join('')}
     </nav>
-    ${VIEW.viewer != null ? viewerHTML() : ''}`;
+    ${VIEW.viewer != null ? viewerHTML() : ''}
+    ${VIEW.cropEdit != null ? cropEditorHTML() : ''}`;
   paintStages();
+  if (VIEW.cropEdit) wireCropEditor();
   wireSearches();
   if (VIEW.tab === 'settings') idb.count('photos').then(n => { const el = document.getElementById('photocount'); if (el) el.textContent = n; });
 }
 
+/* Full-photograph viewer: the WHOLE frame, object-fit contain, with pinch
+   zoom, drag, Fit full page and Actual size. Nothing is ever cut off. */
 function viewerHTML() {
   const v = VIEW.viewer, p = ORDER && ORDER.pages[v.page];
   if (!p) return '';
-  return `<div class="viewer" data-act="closeViewer" role="dialog" aria-label="Photograph">
+  return `<div class="viewer" role="dialog" aria-label="Photograph, complete">
     <div class="bar">
       <button class="btn quiet sm" data-vw="orig" aria-pressed="${v.which === 'orig'}">Original</button>
-      <button class="btn quiet sm" data-vw="clean" aria-pressed="${v.which !== 'orig'}">Cleaned up</button>
+      <button class="btn quiet sm" data-vw="clean" aria-pressed="${v.which !== 'orig'}">Easier to read</button>
+      <button class="btn quiet sm" data-act="vfit">Fit full page</button>
+      <button class="btn quiet sm" data-act="vactual">Actual size</button>
       <button class="btn quiet sm" data-act="closeViewer2">${ico('x')} Close</button>
     </div>
-    <div class="pane" id="vpane"><img id="vimg" alt="Order photograph, full size"></div>
+    <div class="pane" id="vpane"><img id="vimg" alt="Order photograph, complete frame" draggable="false"></div>
+    <p class="hint" style="color:#B9C0C6;text-align:center;margin:6px 0 0">Pinch to zoom · drag to move · the border is the edge of the photograph</p>
   </div>`;
 }
 async function openViewer(page, box) {
-  VIEW.viewer = { page, box: box || null, which: 'clean', urls: null };
+  VIEW.viewer = { page, box: box || null, which: 'clean', urls: null, k: 0 };
   render();
   const rec = await idb.get('photos', ORDER.pages[page].id);
   if (!rec) { VIEW.viewer = null; render(); alert('That photograph is no longer stored on this phone.'); return; }
-  VIEW.viewer.urls = { orig: URL.createObjectURL(rec.original), clean: URL.createObjectURL(rec.clean) };
+  VIEW.viewer.urls = { orig: URL.createObjectURL(rec.original), clean: URL.createObjectURL(rec.enhanced || rec.color) };
   paintViewer();
+}
+function viewerFit(mode) {
+  const v = VIEW.viewer, img = document.getElementById('vimg'), pane = document.getElementById('vpane');
+  if (!v || !img || !img.naturalWidth) return;
+  const fitK = Math.min(pane.clientWidth / img.naturalWidth, pane.clientHeight / img.naturalHeight);
+  v.k = mode === 'actual' ? 1 : mode === 'zoom' ? Math.max(fitK * 2.4, 1) : fitK;
+  img.style.width = (img.naturalWidth * v.k) + 'px';
+  img.style.height = 'auto';
 }
 function paintViewer() {
   const v = VIEW.viewer; if (!v || !v.urls) return;
@@ -1842,19 +2079,89 @@ function paintViewer() {
   if (!img) return;
   img.src = v.which === 'orig' ? v.urls.orig : v.urls.clean;
   img.onload = () => {
-    const p = ORDER.pages[v.page];
-    const k = Math.max(1.6, (pane.clientWidth * 1.9) / img.naturalWidth);
-    img.style.width = (img.naturalWidth * k) + 'px';
-    if (v.box) {   // land the scroll on the exact strip the line came from
-      pane.scrollLeft = v.box[0] * img.naturalWidth * k - 30;
-      pane.scrollTop = v.box[1] * img.naturalHeight * k - pane.clientHeight * 0.3;
+    viewerFit(v.box ? 'zoom' : 'fit');                 // a tapped line opens zoomed on that spot
+    if (v.box) {
+      const bx = (v.box[0] + v.box[2]) / 2, by = (v.box[1] + v.box[3]) / 2;
+      pane.scrollLeft = bx * img.naturalWidth * v.k - pane.clientWidth / 2;
+      pane.scrollTop = by * img.naturalHeight * v.k - pane.clientHeight / 2;
     }
+    wireViewerGestures();
   };
+}
+function wireViewerGestures() {
+  const pane = document.getElementById('vpane'), img = document.getElementById('vimg');
+  if (!pane || pane.__wired) return;
+  pane.__wired = true;
+  const pts = new Map();
+  let startDist = 0, startK = 0, cx = 0, cy = 0;
+  pane.addEventListener('pointerdown', e => { pts.set(e.pointerId, e); pane.setPointerCapture(e.pointerId);
+    if (pts.size === 2) { const [a, b] = [...pts.values()];
+      startDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      startK = VIEW.viewer.k; cx = (a.clientX + b.clientX) / 2; cy = (a.clientY + b.clientY) / 2; } });
+  pane.addEventListener('pointermove', e => { if (!pts.has(e.pointerId)) return;
+    const prev = pts.get(e.pointerId); pts.set(e.pointerId, e);
+    if (pts.size === 2 && startDist) { const [a, b] = [...pts.values()];
+      const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const v = VIEW.viewer, oldK = v.k;
+      v.k = Math.min(4, Math.max(0.05, startK * d / startDist));
+      img.style.width = (img.naturalWidth * v.k) + 'px';
+      const rx = (pane.scrollLeft + cx) / oldK, ry = (pane.scrollTop + cy) / oldK;
+      pane.scrollLeft = rx * v.k - cx; pane.scrollTop = ry * v.k - cy;
+    } else if (pts.size === 1) {
+      pane.scrollLeft -= e.clientX - prev.clientX;
+      pane.scrollTop -= e.clientY - prev.clientY;
+    } });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) startDist = 0; };
+  pane.addEventListener('pointerup', up); pane.addEventListener('pointercancel', up);
+  pane.addEventListener('dblclick', () => { const v = VIEW.viewer;
+    viewerFit(v.k <= Math.min(pane.clientWidth / img.naturalWidth, pane.clientHeight / img.naturalHeight) + 0.001 ? 'actual' : 'fit'); });
 }
 function closeViewer() {
   const v = VIEW.viewer;
   if (v && v.urls) { URL.revokeObjectURL(v.urls.orig); URL.revokeObjectURL(v.urls.clean); }
   VIEW.viewer = null; render();
+}
+
+/* ---- optional, reversible paper-marking (crop) editor. Reading always still
+   sees the whole page; the marked area only focuses the close-up pass. ---- */
+function cropEditorHTML() {
+  const c = VIEW.cropEdit; if (!c) return '';
+  const p = ORDER.pages[c.page];
+  const r = c.rect;
+  return `<div class="viewer" role="dialog" aria-label="Mark the paper">
+    <div class="bar">
+      <button class="btn quiet sm" data-act="cropApply">Use marked area for close-ups</button>
+      <button class="btn quiet sm" data-act="cropFull">Use full original photograph</button>
+      <button class="btn quiet sm" data-act="cropCancel">${ico('x')} Cancel</button>
+    </div>
+    <div class="cropwrap" id="cropwrap">
+      <img id="cropimg" src="${p.thumbUrl}" alt="Page ${c.page + 1}" draggable="false">
+      <div class="cropbox" id="cropbox" style="left:${r.x0 * 100}%;top:${r.y0 * 100}%;width:${(r.x1 - r.x0) * 100}%;height:${(r.y1 - r.y0) * 100}%">
+        ${['nw', 'ne', 'sw', 'se'].map(h2 => `<span class="handle ${h2}" data-h="${h2}"></span>`).join('')}
+      </div>
+    </div>
+    <p class="hint" style="color:#B9C0C6;text-align:center;margin:6px 0 0">Drag the corners to the paper's corners. The whole photograph is always kept and always read.</p>
+  </div>`;
+}
+function wireCropEditor() {
+  const wrap = document.getElementById('cropwrap');
+  if (!wrap || wrap.__wired) return;
+  wrap.__wired = true;
+  const box = document.getElementById('cropbox');
+  let drag = null;
+  const frac = e => { const b = wrap.getBoundingClientRect();
+    return [Math.min(1, Math.max(0, (e.clientX - b.left) / b.width)),
+            Math.min(1, Math.max(0, (e.clientY - b.top) / b.height))]; };
+  wrap.addEventListener('pointerdown', e => { const h = e.target.dataset && e.target.dataset.h;
+    if (h) { drag = h; wrap.setPointerCapture(e.pointerId); e.preventDefault(); } });
+  wrap.addEventListener('pointermove', e => { if (!drag) return;
+    const [x, y] = frac(e), r = VIEW.cropEdit.rect;
+    if (drag.includes('w')) r.x0 = Math.min(x, r.x1 - 0.05); else r.x1 = Math.max(x, r.x0 + 0.05);
+    if (drag.includes('n')) r.y0 = Math.min(y, r.y1 - 0.05); else r.y1 = Math.max(y, r.y0 + 0.05);
+    box.style.left = r.x0 * 100 + '%'; box.style.top = r.y0 * 100 + '%';
+    box.style.width = (r.x1 - r.x0) * 100 + '%'; box.style.height = (r.y1 - r.y0) * 100 + '%'; });
+  const up = () => { drag = null; };
+  wrap.addEventListener('pointerup', up); wrap.addEventListener('pointercancel', up);
 }
 
 /* ------------------------------------------------------- search wiring --
@@ -2007,7 +2314,7 @@ async function forgetPhotos() {
 
 /* one delegated click handler for the whole app */
 document.addEventListener('click', async e => {
-  const t = e.target.closest('[data-tab],[data-act],[data-open],[data-cust],[data-custopen],[data-add],[data-pick],[data-fav],[data-qty],[data-move],[data-dupline],[data-dropline],[data-blank],[data-find],[data-manualprod],[data-price],[data-disc],[data-zoom],[data-vw],[data-rot],[data-retake],[data-up],[data-down],[data-drop],[data-pdf],[data-co],[data-cat],[data-dup],[data-del],[data-theme],[data-delmanual]');
+  const t = e.target.closest('[data-tab],[data-act],[data-open],[data-cust],[data-custopen],[data-add],[data-pick],[data-fav],[data-qty],[data-move],[data-dupline],[data-dropline],[data-blank],[data-find],[data-manualprod],[data-price],[data-disc],[data-zoom],[data-vw],[data-rot],[data-retake],[data-up],[data-down],[data-drop],[data-pdf],[data-co],[data-cat],[data-dup],[data-del],[data-theme],[data-delmanual],[data-cropedit],[data-retrysec]');
   if (!t) return;
   const D = t.dataset;
 
@@ -2087,6 +2394,15 @@ document.addEventListener('click', async e => {
     }
     else if (act === 'closeViewer') { if (e.target === t) closeViewer(); }
     else if (act === 'closeViewer2') closeViewer();
+    else if (act === 'vfit') viewerFit('fit');
+    else if (act === 'vactual') viewerFit('actual');
+    else if (act === 'undo') undoLines();
+    else if (act === 'redo') redoLines();
+    else if (act === 'cropApply') { const c = VIEW.cropEdit;
+      ORDER.pages[c.page].crop = { ...c.rect }; VIEW.cropEdit = null; touch(); render(); }
+    else if (act === 'cropFull') { const c = VIEW.cropEdit;
+      ORDER.pages[c.page].crop = null; VIEW.cropEdit = null; touch(); render(); }
+    else if (act === 'cropCancel') { VIEW.cropEdit = null; render(); }
     return;
   }
 
@@ -2097,7 +2413,7 @@ document.addEventListener('click', async e => {
   if (D.custopen) { CUSTTABQ = CUST[+D.custopen].n; ORDER = ORDER || blankOrder(); pickCustomer(+D.custopen); VIEW.tab = 'new'; VIEW.sub = 'manual'; render(); return; }
   if (D.add) { addProduct(D.add, !!D.case); return; }
   if (D.fav) { favs[D.fav] ? delete favs[D.fav] : favs[D.fav] = 1; SAVE('favs', favs); paintProdResults(); return; }
-  if (D.pick) { const l = lineById(D.pick); if (!l) return; buzz(settings.haptics ? 9 : 0);
+  if (D.pick) { const l = lineById(D.pick); if (!l) return; buzz(settings.haptics ? 9 : 0); snapshotLines();
     if (l.sku && l.cands.some(c => c.key === D.key && c.p.sku === l.sku && c.p.co === l.co)) { l.sku = null; l.co = ''; l.name = ''; l.priceC = 0; l.priceSrc = 'none'; refreshLine(l); }
     else applyProduct(l, D.key, false);
     l.blank = false; touch(); render(); return; }
@@ -2110,10 +2426,10 @@ document.addEventListener('click', async e => {
   if (D.dupline) { const l = lineById(D.dupline); if (!l) return;
     const c = { ...l, id: 'l' + Math.random().toString(36).slice(2, 8) };
     ORDER.lines.splice(ORDER.lines.indexOf(l) + 1, 0, c); touch(); render(); return; }
-  if (D.dropline) { const l = lineById(D.dropline); if (!l) return;
+  if (D.dropline) { const l = lineById(D.dropline); if (!l) return; snapshotLines();
     const at = ORDER.lines.indexOf(l); ORDER.lines.splice(at, 1); touch(); render();
     toastUndo('Line removed', () => { ORDER.lines.splice(at, 0, l); touch(); render(); }); return; }
-  if (D.blank) { const l = lineById(D.blank); if (!l) return;
+  if (D.blank) { const l = lineById(D.blank); if (!l) return; snapshotLines();
     l.blank = !l.blank; if (l.blank) { l.sku = null; l.co = ''; } touch(); render(); return; }
   if (D.find) { const l = lineById(D.find); if (!l) return;
     const q = prompt('Search the catalogue for this line:', l.text);
@@ -2135,6 +2451,10 @@ document.addEventListener('click', async e => {
     if (isNaN(f) || f < 0) return;
     l.discC = Math.round(f * 100); touch(); render(); return; }
   if (D.rot) { rotatePage(+D.rot); return; }
+  if (D.cropedit != null) { const pg = ORDER.pages[+D.cropedit];
+    VIEW.cropEdit = { page: +D.cropedit, rect: pg.crop ? { ...pg.crop } : { x0: 0.06, y0: 0.06, x1: 0.94, y1: 0.94 } };
+    render(); return; }
+  if (D.retrysec != null) { retrySections(+D.retrysec); return; }
   if (D.retake) { VIEW.retake = +D.retake; document.getElementById('cam').click(); return; }
   if (D.up) { movePage(+D.up, -1); return; }
   if (D.down) { movePage(+D.down, 1); return; }
@@ -2230,7 +2550,7 @@ async function rehydratePages() {
   for (const p of ORDER.pages || []) {
     if (p.thumbUrl && LIVE_URLS.has(p.thumbUrl)) continue;   // a stale one from before a refresh never counts
     const rec = await idb.get('photos', p.id);
-    p.thumbUrl = rec ? URL.createObjectURL(rec.clean) : '';
+    p.thumbUrl = rec ? URL.createObjectURL(rec.enhanced || rec.color || rec.clean) : '';
     if (p.thumbUrl) LIVE_URLS.add(p.thumbUrl);
     p.state = rec ? 'ready' : 'failed';
   }

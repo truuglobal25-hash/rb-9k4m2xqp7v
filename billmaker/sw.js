@@ -1,5 +1,5 @@
-/* Bill Maker service worker - its own scope, its own cache. v1.0.0 build 1787500559 */
-const CACHE = 'billmaker-1.0.0-1787500559';
+/* Bill Maker service worker - its own scope, its own cache. v2.0.0 build 1787503249 */
+const CACHE = 'billmaker-2.0.0-1787503249';
 const CORE = ['./', './index.html', './billdata-618d01744d.js', './imgworker.js', './manifest.json', './icon.svg'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));

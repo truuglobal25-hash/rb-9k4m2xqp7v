@@ -1,17 +1,14 @@
-/* Bill Maker image worker.
-   Runs the whole photograph clean-up off the main thread so the screen never
-   freezes while a page is being straightened. Posts progress as it goes.
+/* Bill Maker image worker v2.
+   THE RULE THAT CAUSED THE v1 FAILURE LIVES HERE, INVERTED:
+   v1 auto-cropped every photograph to its "biggest bright region" before
+   reading. On real photos that threw away up to ~35% of the frame - page
+   edges, whole halves of two-page spreads - so the reader never saw them.
+   v2 NEVER crops. The full frame is preserved, enhanced as a copy, and read
+   whole PLUS in overlapping close-up sections so edge writing is never lost.
+   The user's own approved crop (if any) applies only to the close-up pass. */
 
-   Pipeline: EXIF-correct orientation -> downscale -> flat-field (kills the
-   shadow and glare gradients a phone in a car always produces) -> percentile
-   contrast stretch -> unsharp mask -> find the PAPER (the bright region, not
-   the ink: a dark dashboard is darker than any pencil stroke) -> crop ->
-   measure tilt from the page alone -> rotate.
-
-   Kept greyscale on purpose. Hard black-and-white thresholding destroys the
-   light strokes a vision reader can still make out. */
-
-const MAXEDGE = 1900;   // enough for a reader, small enough to send quickly
+const OCR_EDGE = 2200;    // full-page reading copy
+const TILE_EDGE = 1500;   // each close-up section
 
 function grey(d, w, h) {
   const g = new Float32Array(w * h);
@@ -19,8 +16,7 @@ function grey(d, w, h) {
     g[j] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
   return g;
 }
-
-function boxBlur(src, w, h, r) {                    // separable, O(n)
+function boxBlur(src, w, h, r) {
   const t = new Float32Array(w * h), o = new Float32Array(w * h), k = 2 * r + 1;
   for (let y = 0; y < h; y++) {
     let s = 0; const row = y * w;
@@ -40,20 +36,7 @@ function boxBlur(src, w, h, r) {                    // separable, O(n)
   }
   return o;
 }
-
-/* Largest run of rows/columns that are mostly bright = the sheet of paper. */
-function longestBrightRun(len, other, bright) {
-  let bs = 0, be = -1, cs = -1;
-  for (let i = 0; i < len; i++) {
-    if (bright[i] >= other * 0.34) { if (cs < 0) cs = i; }
-    else if (cs >= 0) { if (i - cs > be - bs) { bs = cs; be = i - 1; } cs = -1; }
-  }
-  if (cs >= 0 && len - cs > be - bs) { bs = cs; be = len - 1; }
-  return be > bs ? [bs, be] : [0, len - 1];
-}
-
-/* Projection profile: the rotation whose row-sums vary most is the upright one. */
-function skewAngle(g, w, h) {
+function skewAngle(g, w, h) {          // measured and reported, never applied destructively
   let best = 0, bestV = -1;
   for (let a = -6; a <= 6; a += 0.5) {
     const t = Math.tan(a * Math.PI / 180), rows = new Float32Array(h);
@@ -69,8 +52,6 @@ function skewAngle(g, w, h) {
   }
   return best;
 }
-
-/* A coarse hash of the cleaned page, so a page photographed twice is spotted. */
 function pageHash(g, w, h) {
   const S = 8, cell = new Float32Array(S * S), n = new Float32Array(S * S);
   for (let y = 0; y < h; y++) {
@@ -85,21 +66,13 @@ function pageHash(g, w, h) {
   return bits;
 }
 
-async function process(blob, opts) {
-  const say = s => self.postMessage({ type: 'stage', stage: s });
-  say('improving');
-  const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
-  const sc = Math.min(1, MAXEDGE / Math.max(bmp.width, bmp.height));
-  const w = Math.round(bmp.width * sc), h = Math.round(bmp.height * sc);
-  const c = new OffscreenCanvas(w, h), x = c.getContext('2d', { willReadFrequently: true });
-  x.drawImage(bmp, 0, 0, w, h); bmp.close();
-
-  const im = x.getImageData(0, 0, w, h), d = im.data, g = grey(d, w, h);
+/* Flat-field + percentile stretch + unsharp, on a COPY, full frame. */
+function enhance(im, w, h) {
+  const d = im.data, g = grey(d, w, h);
   const bg = boxBlur(g, w, h, Math.max(8, Math.round(Math.min(w, h) / 22)));
   const flat = new Float32Array(w * h);
   for (let i = 0; i < flat.length; i++) flat[i] = Math.min(255, g[i] / Math.max(1, bg[i]) * 235);
   const sm = boxBlur(flat, w, h, 1);
-
   const hist = new Uint32Array(256);
   for (let i = 0; i < flat.length; i++) hist[flat[i] | 0]++;
   let lo = 0, hi = 255, acc = 0; const n = flat.length;
@@ -108,61 +81,158 @@ async function process(blob, opts) {
   for (let i = 255; i >= 0; i--) { acc += hist[i]; if (acc > n * 0.02) { hi = i; break; } }
   const span = Math.max(24, hi - lo);
   for (let i = 0, j = 0; j < flat.length; i += 4, j++) {
-    let v = flat[j] + (flat[j] - sm[j]) * 0.9;              // unsharp mask
+    let v = flat[j] + (flat[j] - sm[j]) * 0.9;
     v = (v - lo) / span * 255;
     d[i] = d[i + 1] = d[i + 2] = v < 0 ? 0 : v > 255 ? 255 : v; d[i + 3] = 255;
   }
-  x.putImageData(im, 0, 0);
+  return g;   // original grey, for metrics
+}
 
-  const g2 = grey(d, w, h);
-  let x0, x1, y0, y1;
-  if (opts && opts.crop) {                                  // the owner corrected the crop by hand
-    x0 = Math.round(opts.crop.x0 * w); x1 = Math.round(opts.crop.x1 * w);
-    y0 = Math.round(opts.crop.y0 * h); y1 = Math.round(opts.crop.y1 * h);
-  } else {
-    const rowB = new Float32Array(h), colB = new Float32Array(w);
-    for (let y = 0; y < h; y++) {
-      const row = y * w;
-      for (let xx = 0; xx < w; xx++) if (g2[row + xx] > 195) { rowB[y]++; colB[xx]++; }
-    }
-    const yr = longestBrightRun(h, w, rowB), xr = longestBrightRun(w, h, colB);
-    const pad = Math.round(Math.min(w, h) * 0.012);
-    y0 = Math.max(0, yr[0] - pad); y1 = Math.min(h - 1, yr[1] + pad);
-    x0 = Math.max(0, xr[0] - pad); x1 = Math.min(w - 1, xr[1] + pad);
-    if (x1 - x0 < w * 0.25 || y1 - y0 < h * 0.25) { x0 = 0; y0 = 0; x1 = w - 1; y1 = h - 1; }
+/* Handwriting bands: rows where ink density is real. Every band must later be
+   accounted for by a read line, or the app flags COULD NOT READ. */
+function inkBands(eg, w, h) {
+  const dens = new Float32Array(h);
+  for (let y = 0; y < h; y++) { let c = 0; const row = y * w;
+    for (let x = 0; x < w; x += 2) if (eg[row + x] < 120) c++;
+    dens[y] = c / (w / 2);
   }
-  const cw = x1 - x0 + 1, ch = y1 - y0 + 1;
+  const bands = []; let start = -1;
+  const ON = 0.012, MINH = Math.max(6, h * 0.008);
+  for (let y = 0; y < h; y++) {
+    if (dens[y] > ON) { if (start < 0) start = y; }
+    else if (start >= 0) {
+      if (y - start >= MINH) bands.push([start / h, y / h]);
+      start = -1;
+    }
+  }
+  if (start >= 0 && h - start >= MINH) bands.push([start / h, 1]);
+  // merge bands separated by tiny gaps (same paragraph of writing)
+  const out = [];
+  for (const b of bands) {
+    if (out.length && b[0] - out[out.length - 1][1] < 0.008) out[out.length - 1][1] = b[1];
+    else out.push(b);
+  }
+  return out;
+}
 
-  const pg = new Float32Array(cw * ch);
-  for (let y = 0; y < ch; y++)
-    for (let xx = 0; xx < cw; xx++) pg[y * cw + xx] = g2[(y + y0) * w + (x0 + xx)];
-  const ang = (opts && opts.rotate != null) ? 0 : skewAngle(pg, cw, ch);
-  const turn = (opts && opts.rotate) || 0;                  // extra 90-degree turns from the owner
+/* Capture-quality advice. Advisory only - it never blocks the user. */
+function quality(eg, g, w, h) {
+  let mean = 0; for (let i = 0; i < g.length; i += 7) mean += g[i];
+  mean /= Math.ceil(g.length / 7);
+  let varSum = 0, cnt = 0;                          // gradient variance ~= sharpness
+  for (let y = 1; y < h - 1; y += 3) for (let x = 1; x < w - 1; x += 3) {
+    const i = y * w + x, gx = g[i + 1] - g[i - 1], gy = g[i + w] - g[i - w];
+    varSum += gx * gx + gy * gy; cnt++;
+  }
+  const sharp = varSum / cnt;
+  const m = Math.round(Math.min(w, h) * 0.02);      // ink touching the frame edge
+  const edge = { top: 0, bottom: 0, left: 0, right: 0 };
+  for (let x = 0; x < w; x += 2) {
+    for (let y = 0; y < m; y++) if (eg[y * w + x] < 110) { edge.top++; break; }
+    for (let y = h - m; y < h; y++) if (eg[y * w + x] < 110) { edge.bottom++; break; }
+  }
+  for (let y = 0; y < h; y += 2) {
+    for (let x = 0; x < m; x++) if (eg[y * w + x] < 110) { edge.left++; break; }
+    for (let x = w - m; x < w; x++) if (eg[y * w + x] < 110) { edge.right++; break; }
+  }
+  let minX = w, maxX = 0, minY = h, maxY = 0, inkN = 0;
+  for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 4) if (eg[y * w + x] < 120) {
+    inkN++; if (x < minX) minX = x; if (x > maxX) maxX = x; if (y < minY) minY = y; if (y > maxY) maxY = y;
+  }
+  const inkArea = inkN ? ((maxX - minX) * (maxY - minY)) / (w * h) : 0;
+  const warn = [];
+  if (mean < 70) warn.push('The photograph is quite dark - more light would help.');
+  if (sharp < 110) warn.push('The writing looks soft - hold steadier or move closer.');
+  if (edge.top > w * 0.06 || edge.bottom > w * 0.06 || edge.left > h * 0.06 || edge.right > h * 0.06)
+    warn.push('Writing touches the edge of the frame - part of the paper may be outside the photograph.');
+  if (inkN && inkArea < 0.18) warn.push('The camera looks far from the page - closer fills the frame better.');
+  return warn;
+}
 
-  const swap = turn % 180 !== 0;
-  const ow = swap ? ch : cw, oh = swap ? cw : ch;
-  const o = new OffscreenCanvas(ow, oh), ox = o.getContext('2d');
-  ox.fillStyle = '#fff'; ox.fillRect(0, 0, ow, oh);
-  ox.translate(ow / 2, oh / 2);
-  ox.rotate((turn - ang) * Math.PI / 180);
-  ox.drawImage(c, x0, y0, cw, ch, -cw / 2, -ch / 2, cw, ch);
+const jpeg = (cv, q) => cv.convertToBlob({ type: 'image/jpeg', quality: q });
 
-  const clean = await o.convertToBlob({ type: 'image/jpeg', quality: 0.86 });
-  const ts = Math.min(1, 320 / Math.max(ow, oh));
-  const t = new OffscreenCanvas(Math.max(1, Math.round(ow * ts)), Math.max(1, Math.round(oh * ts)));
-  t.getContext('2d').drawImage(o, 0, 0, t.width, t.height);
-  const thumb = await t.convertToBlob({ type: 'image/jpeg', quality: 0.72 });
+async function draw(bmpOrCanvas, sx, sy, sw, sh, dw, dh) {
+  const c = new OffscreenCanvas(dw, dh);
+  c.getContext('2d').drawImage(bmpOrCanvas, sx, sy, sw, sh, 0, 0, dw, dh);
+  return c;
+}
 
-  return { clean, thumb, w: ow, h: oh, deskew: +ang.toFixed(1), turn, hash: pageHash(pg, cw, ch) };
+/* Overlapping close-up sections. >=15% overlap so edge writing is never lost.
+   Portrait: 3 horizontal strips. Landscape (spreads): 2x2. */
+function tileRects(w, h, crop) {
+  const cx0 = crop ? crop.x0 : 0, cy0 = crop ? crop.y0 : 0;
+  const cx1 = crop ? crop.x1 : 1, cy1 = crop ? crop.y1 : 1;
+  const cw = cx1 - cx0, ch = cy1 - cy0;
+  const R = [];
+  if (h * ch >= w * cw) {
+    for (const [a, b] of [[0, 0.42], [0.29, 0.71], [0.58, 1]])
+      R.push({ x0: cx0, x1: cx1, y0: cy0 + ch * a, y1: cy0 + ch * b });
+  } else {
+    for (const [ya, yb] of [[0, 0.6], [0.4, 1]])
+      for (const [xa, xb] of [[0, 0.58], [0.42, 1]])
+        R.push({ x0: cx0 + cw * xa, x1: cx0 + cw * xb, y0: cy0 + ch * ya, y1: cy0 + ch * yb });
+  }
+  return R;
 }
 
 self.onmessage = async (e) => {
-  const { id, blob, opts } = e.data;
+  const { id, op, blob, opts } = e.data;
+  const say = s => self.postMessage({ type: 'stage', id, stage: s });
   try {
-    const r = await process(blob, opts);
-    self.postMessage({ type: 'done', id, ...r }, [
-      /* blobs are not transferable; they are structured-cloned cheaply */
-    ]);
+    if (op === 'prepare') {
+      say('improving');
+      const bmp = await createImageBitmap(blob, { imageOrientation: 'from-image' });
+      const sc = Math.min(1, OCR_EDGE / Math.max(bmp.width, bmp.height));
+      let w = Math.round(bmp.width * sc), h = Math.round(bmp.height * sc);
+      const turn = (opts && opts.rotate) || 0;                // user-chosen quarter turns only
+      const swap = turn % 180 !== 0;
+      const cv = new OffscreenCanvas(swap ? h : w, swap ? w : h);
+      const cx2 = cv.getContext('2d', { willReadFrequently: true });
+      cx2.translate(cv.width / 2, cv.height / 2);
+      cx2.rotate(turn * Math.PI / 180);
+      cx2.drawImage(bmp, -w / 2, -h / 2, w, h);
+      bmp.close();
+      if (swap) { const t = w; w = h; h = t; }
+
+      const colorFull = await jpeg(cv, 0.85);                 // full frame, true colour
+      const im = cx2.getImageData(0, 0, w, h);
+      const g = enhance(im, w, h);                            // in-place on the copy
+      const ec = new OffscreenCanvas(w, h);
+      ec.getContext('2d').putImageData(im, 0, 0);
+      const enhancedFull = await jpeg(ec, 0.85);              // full frame, enhanced
+
+      const eg = grey(im.data, w, h);
+      const bands = inkBands(eg, w, h);
+      const warnings = quality(eg, g, w, h);
+      const deskew = skewAngle(eg, w, h);
+      const hash = pageHash(eg, w, h);
+
+      const ts = Math.min(1, 480 / Math.max(w, h));
+      const tc = await draw(cv, 0, 0, w, h, Math.max(1, Math.round(w * ts)), Math.max(1, Math.round(h * ts)));
+      const thumb = await jpeg(tc, 0.75);
+
+      self.postMessage({ type: 'done', id, colorFull, enhancedFull, thumb,
+        w, h, deskew: +deskew.toFixed(1), hash, bands, warnings, turn });
+      return;
+    }
+    if (op === 'tiles') {
+      // opts.crop = user-approved region (fractions) or null for the full frame
+      const bmp = await createImageBitmap(blob);              // blob = enhancedFull
+      const w = bmp.width, h = bmp.height;
+      const rects = tileRects(w, h, opts && opts.crop);
+      const tiles = [];
+      for (const r of rects) {
+        const sw = Math.round((r.x1 - r.x0) * w), sh = Math.round((r.y1 - r.y0) * h);
+        const sc = Math.min(1, TILE_EDGE / Math.max(sw, sh));
+        const c = await draw(bmp, Math.round(r.x0 * w), Math.round(r.y0 * h), sw, sh,
+          Math.max(1, Math.round(sw * sc)), Math.max(1, Math.round(sh * sc)));
+        tiles.push({ blob: await jpeg(c, 0.85), rect: r });
+      }
+      bmp.close();
+      self.postMessage({ type: 'done', id, tiles });
+      return;
+    }
+    throw new Error('unknown op ' + op);
   } catch (err) {
     self.postMessage({ type: 'error', id, message: String(err && err.message || err) });
   }
