@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bill Maker">
 <meta name="theme-color" content="#2E6A53">
-<meta name="x-build" content="1787472311">
+<meta name="x-build" content="1787472629">
 <style>/* Bill Maker — visual system.
    Deep ink, warm porcelain, mineral green, burnt tangerine, muted brick.
    No gradients. No glass. No emoji. One spacing scale, one type scale,
@@ -796,7 +796,7 @@ async function readPages() {
     });
     if (!res.ok) throw new Error(
       res.status === 429 ? 'The reading service is busy. Wait a moment and tap Read the order again — your photograph is saved.'
-      : res.status === 404 ? 'No reading service is set up yet. Open Settings and enter its address. You can build this order by hand in the meantime.'
+      : (res.status === 404 || res.status === 405) ? 'No reading service is set up yet. Open Settings and enter its address. You can build this order by hand in the meantime.'
       : 'The reading service replied ' + res.status + '. Your photograph is saved; try again, or build the order by hand.');
     const data = await res.json();
     if (data.error) throw new Error(data.error);
