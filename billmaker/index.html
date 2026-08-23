@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bill Maker">
 <meta name="theme-color" content="#2E6A53">
-<meta name="x-build" content="1787503249">
+<meta name="x-build" content="1787504120">
 <style>/* Bill Maker — visual system.
    Deep ink, warm porcelain, mineral green, burnt tangerine, muted brick.
    No gradients. No glass. No emoji. One spacing scale, one type scale,
@@ -1421,10 +1421,13 @@ function cropHTML(line) {
   const bw = Math.max(0.04, x1 - x0);
   const k = 100 / bw;                                   // % width of the strip
   const cy = (y0 + y1) / 2;
+  // translate % is relative to the image's own box: -x0*100% shifts the box's
+  // left edge to the strip's left; -cy*100% lifts the line's centre to the top,
+  // then 36px drops it to the middle of the 72px strip.
   return `<button class="crop" data-zoom="${line.page}" data-box="${esc(JSON.stringify(line.box))}"
     aria-label="Show this handwriting on the photograph">
     <img src="${pageUrl(line.page)}" alt=""
-     style="width:${k.toFixed(1)}%;transform:translate(${(-x0 * k).toFixed(2)}%, calc(36px - ${(cy * k * (p.h / p.w)).toFixed(2)}%))">
+     style="width:${k.toFixed(1)}%;transform:translate(${(-x0 * 100).toFixed(2)}%, calc(36px - ${(cy * 100).toFixed(2)}%))">
   </button>`;
 }
 
@@ -2408,7 +2411,9 @@ document.addEventListener('click', async e => {
 
   if (D.zoom != null) { openViewer(+D.zoom, D.box && D.box !== 'null' ? JSON.parse(D.box) : null); return; }
   if (D.vw) { VIEW.viewer.which = D.vw; render(); paintViewer(); return; }
-  if (D.open) { const o = orders[D.open]; if (!o) return; ORDER = o; VIEW.tab = 'new'; VIEW.sub = o.read && !o.reviewed ? 'review' : (o.status !== 'Draft' ? 'finish' : (o.pages.length && !o.lines.length ? 'photo' : 'manual')); rehydratePages(); render(); return; }
+  if (D.open) { const o = orders[D.open]; if (!o) return; ORDER = o; VIEW.tab = 'new'; VIEW.sub = o.read && !o.reviewed ? 'review' : (o.status !== 'Draft' ? 'finish' : (o.pages.length && !o.lines.length ? 'photo' : 'manual'));
+    if (o.read && o.customer.custIndex == null && !o.customer.manual) o.custChoices = matchCustomerFromPage(o.read.fields);
+    rehydratePages(); render(); return; }
   if (D.cust) { pickCustomer(+D.cust); return; }
   if (D.custopen) { CUSTTABQ = CUST[+D.custopen].n; ORDER = ORDER || blankOrder(); pickCustomer(+D.custopen); VIEW.tab = 'new'; VIEW.sub = 'manual'; render(); return; }
   if (D.add) { addProduct(D.add, !!D.case); return; }
@@ -2505,8 +2510,16 @@ document.addEventListener('change', e => {
   if (D.unit) { const l = lineById(D.unit); if (!l) return;
     l.unit = t.value;
     const p = l.sku ? productOf(l) : null;
-    if (p) { const useCase = (l.unit === 'case' || l.unit === 'carton') && p.cp > 0;
-      if (l.priceSrc !== 'manual') { l.priceC = Math.round((useCase ? p.cp : p.price) * 100) || 0; l.priceSrc = l.priceC ? 'lightspeed' : 'none'; } }
+    if (p && l.priceSrc !== 'manual') {
+      const wantsCase = (l.unit === 'case' || l.unit === 'carton');
+      if (wantsCase && !(p.cp > 0)) {
+        // no case price on file: never pass the piece price off as a case price
+        l.priceC = 0; l.priceSrc = 'none';
+      } else {
+        l.priceC = Math.round((wantsCase ? p.cp : p.price) * 100) || 0;
+        l.priceSrc = l.priceC ? 'lightspeed' : 'none';
+      }
+    }
     touch(); render(); return; }
   if (D.ord) { ORDER[D.ord] = t.value; touch(); return; }
   if (D.set) { settings[D.set] = D.set === 'haptics' ? !!t.value : t.value; SAVE('settings', settings); touch(); return; }
@@ -2539,9 +2552,15 @@ function editCustomer() {
 function pickCustomer(i) {
   const c = CUST[i]; if (!c) return;
   const C = ORDER.customer;
-  C.custIndex = i; C.manual = false;
-  C.name = c.n; C.phone = C.phone || c.p; C.address = C.address || c.ad;
-  C.area = C.area || c.t; C.contact = C.contact || c.contact || '';
+  const prevAuto = C.auto || {};
+  C.custIndex = i; C.manual = false; C.name = c.n;
+  C.auto = {};
+  // fill what is empty, and REPLACE anything a previously-tapped customer
+  // auto-filled - switching customers must not leave the old one's address
+  for (const [k, v] of [['phone', c.p], ['address', c.ad], ['area', c.t], ['contact', c.contact || '']]) {
+    if (v && (!C[k] || prevAuto[k])) { C[k] = v; C.auto[k] = true; }
+    else if (!v && prevAuto[k]) { C[k] = ''; }
+  }
   ORDER.custChoices = null;
   touch(); render();
 }
@@ -2587,6 +2606,8 @@ applyTheme();
     const o = orders[res.id];
     if (o.status === 'Draft' && ((o.lines || []).length || (o.pages || []).length)) {
       ORDER = o;
+      if (o.read && o.customer.custIndex == null && !o.customer.manual)
+        o.custChoices = matchCustomerFromPage(o.read.fields);   // suggestions survive a refresh
       VIEW.tab = 'new';
       VIEW.sub = res.sub || (o.read && !o.reviewed ? 'review' : o.pages.length && !o.lines.length ? 'photo' : 'manual');
       rehydratePages();
