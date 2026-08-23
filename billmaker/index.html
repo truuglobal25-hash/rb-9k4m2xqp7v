@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bill Maker">
 <meta name="theme-color" content="#2E6A53">
-<meta name="x-build" content="1787505078">
+<meta name="x-build" content="1787505700">
 <style>/* Bill Maker — visual system.
    Deep ink, warm porcelain, mineral green, burnt tangerine, muted brick.
    No gradients. No glass. No emoji. One spacing scale, one type scale,
@@ -925,11 +925,18 @@ function mergePage(result, hist) {
   // order down the page
   lines.sort((a, b2) => (midY(a.box) ?? 2) - (midY(b2.box) ?? 2));
 
-  // completeness: every handwriting band must end up with an outcome
+  // completeness: every handwriting band must end up with an outcome.
+  // Customer details (shop name, phone...) already cover their own bands.
   const page = ORDER.pages[result.page];
+  const custBoxes = [];
+  if (result.full.customer) for (const k in result.full.customer) {
+    const f = result.full.customer[k];
+    if (f && f.v && f.box && (f.page == null || f.page === 0)) custBoxes.push(f.box);
+  }
   for (const [y0, y1] of (page.bands || [])) {
     if (y1 - y0 < 0.014) continue;
-    const covered = lines.some(l => { const my = midY(l.box); return my != null && my >= y0 - 0.02 && my <= y1 + 0.02; });
+    const covered = lines.some(l => { const my = midY(l.box); return my != null && my >= y0 - 0.02 && my <= y1 + 0.02; })
+      || custBoxes.some(b => { const my = (b[1] + b[3]) / 2; return my >= y0 - 0.02 && my <= y1 + 0.02; });
     if (!covered) {
       const ph = makeLine({ raw: '', text: '', c: 'unreadable', kind: 'item' }, hist);
       ph.page = result.page; ph.box = [0.02, y0, 0.98, y1];
