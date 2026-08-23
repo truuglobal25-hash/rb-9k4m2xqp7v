@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bill Maker">
 <meta name="theme-color" content="#2E6A53">
-<meta name="x-build" content="1787504120">
+<meta name="x-build" content="1787505078">
 <style>/* Bill Maker — visual system.
    Deep ink, warm porcelain, mineral green, burnt tangerine, muted brick.
    No gradients. No glass. No emoji. One spacing scale, one type scale,
@@ -293,7 +293,7 @@ nav.tabs button svg{width:24px;height:24px}
 input,select,textarea{font-size:16px}
 </style></head><body>
 <div id="app"><div class="empty" style="padding-top:40vh">Opening…</div></div>
-<script src="billdata-618d01744d.js"></script>
+<script src="billdata-35442c94dc.js"></script>
 <script>/* ============================================================================
    Bill Maker — core: identity, storage, indexes, router.
    Everything this app owns is prefixed bm_ and shared with nothing else.
@@ -1074,7 +1074,7 @@ function applyProduct(line, key, silent) {
   if (p.price > 0) {
     const useCase = (line.unit === 'case' || line.unit === 'carton') && p.cp > 0;
     line.priceC = Math.round((useCase ? p.cp : p.price) * 100);
-    line.priceSrc = 'lightspeed';
+    line.priceSrc = p.pl ? 'list' : 'lightspeed';   // poster price list vs Lightspeed
   } else { line.priceC = 0; line.priceSrc = 'none'; }
   if ((line.unit === 'case' || line.unit === 'carton') && !p.cp) line.unit = 'piece';
   line.state = companyProblem(line) ? 'COMPANY' : tierFor(line);
@@ -1656,6 +1656,7 @@ function lineHTML(l, i) {
 
 function priceHTML(l) {
   const label = l.priceSrc === 'lightspeed' ? '<span class="tag ok">Lightspeed price</span>'
+    : l.priceSrc === 'list' ? '<span class="tag ok">Price list price</span>'
     : l.priceSrc === 'manual' ? '<span class="tag review">Manual price</span>'
     : '<span class="tag bad">Price needed</span>';
   const p = l.sku ? productOf(l) : null;
@@ -2517,7 +2518,7 @@ document.addEventListener('change', e => {
         l.priceC = 0; l.priceSrc = 'none';
       } else {
         l.priceC = Math.round((wantsCase ? p.cp : p.price) * 100) || 0;
-        l.priceSrc = l.priceC ? 'lightspeed' : 'none';
+        l.priceSrc = l.priceC ? (p.pl ? 'list' : 'lightspeed') : 'none';
       }
     }
     touch(); render(); return; }
