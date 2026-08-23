@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bill Maker">
 <meta name="theme-color" content="#2E6A53">
-<meta name="x-build" content="1787505700">
+<meta name="x-build" content="1787505957">
 <style>/* Bill Maker — visual system.
    Deep ink, warm porcelain, mineral green, burnt tangerine, muted brick.
    No gradients. No glass. No emoji. One spacing scale, one type scale,
@@ -1782,7 +1782,7 @@ function vFinish() {
         <button class="btn quiet sm" data-act="editCust">Edit</button></div>
       ${both ? `<p class="hint">This order carries both companies. The PDF separates Yusuf Overseas and MYCO Global Distributors clearly, and each can also be printed on its own.</p>` : ''}
       ${cnt.noPrice ? `<p class="hint" style="color:var(--brick-2)">${cnt.noPrice} line${cnt.noPrice === 1 ? ' still needs' : 's still need'} a price. The PDF will say PRICE NEEDED on ${cnt.noPrice === 1 ? 'it' : 'them'}.</p>` : ''}
-      ${blanks.length ? `<p class="hint">${blanks.length} line${blanks.length === 1 ? '' : 's'} left blank go on the PDF as notes for the office.</p>` : ''}
+      ${blanks.length ? `<p class="hint">${blanks.length} line${blanks.length === 1 ? ' left blank goes' : 's left blank go'} on the PDF as notes for the office.</p>` : ''}
       <div class="rule"></div>
       ${T0.YOL ? `<div class="row" style="border:0;min-height:36px;padding:4px 0"><span class="grow">Yusuf Overseas subtotal</span><b class="money">${money(T0.YOL)}</b></div>` : ''}
       ${T0.MYCO ? `<div class="row" style="border:0;min-height:36px;padding:4px 0"><span class="grow">MYCO subtotal</span><b class="money">${money(T0.MYCO)}</b></div>` : ''}
