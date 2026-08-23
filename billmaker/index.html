@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bill Maker">
 <meta name="theme-color" content="#2E6A53">
-<meta name="x-build" content="1787507657">
+<meta name="x-build" content="1787507876">
 <style>/* Bill Maker — visual system.
    Deep ink, warm porcelain, mineral green, burnt tangerine, muted brick.
    No gradients. No glass. No emoji. One spacing scale, one type scale,
@@ -1040,7 +1040,15 @@ const parseNum = w => /^\d+$/.test(w) ? +w : numWord(w);
    is not a command is order wording and goes to the extractor. */
 function applyVoiceCommand(text) {
   const t = norm(text);
+  // money keeps its decimal point, which norm() strips
+  const traw = String(text).toLowerCase().replace(/[,$]/g, '').replace(/\s+/g, ' ').trim().replace(/[.?!]$/, '');
   let m;
+  if ((m = traw.match(/^(?:the )?price is (\d+(?:\.\d{1,2})?)( including vat| vat included| plus vat)?$/)) && ORDER.lines.length) {
+    snapshotLines(); const l = ORDER.lines[ORDER.lines.length - 1];
+    l.priceC = Math.round(parseFloat(m[1]) * 100); l.priceSrc = 'manual';
+    if (m[2]) l.vat = /plus/.test(m[2]) ? 'exc' : 'inc';
+    return 'Price set to ' + money(l.priceC) + (l.vat ? (l.vat === 'inc' ? ' VAT included.' : ' plus VAT.') : '.');
+  }
   if ((m = t.match(/^(?:change|make) line (\w+)(?: quantity| qty)? to (\w+)$/))) {
     const i = parseNum(m[1]), q = parseNum(m[2]);
     if (i && q && ORDER.lines[i - 1]) { snapshotLines(); ORDER.lines[i - 1].qty = q; return 'Line ' + i + ' quantity is now ' + q + '.'; }
@@ -1051,12 +1059,6 @@ function applyVoiceCommand(text) {
   if ((m = t.match(/^delete line (\w+)$/))) {
     const i = parseNum(m[1]);
     if (i && ORDER.lines[i - 1]) { snapshotLines(); const l = ORDER.lines.splice(i - 1, 1)[0]; return 'Removed ' + (l.name || l.text) + '.'; }
-  }
-  if ((m = t.match(/^(?:the )?price is (\d+(?:[.]\d{1,2})?)( including vat| vat included| plus vat)?$/)) && ORDER.lines.length) {
-    snapshotLines(); const l = ORDER.lines[ORDER.lines.length - 1];
-    l.priceC = Math.round(parseFloat(m[1]) * 100); l.priceSrc = 'manual';
-    if (m[2]) l.vat = /plus/.test(m[2]) ? 'exc' : 'inc';
-    return 'Price set to ' + money(l.priceC) + (l.vat ? (l.vat === 'inc' ? ' VAT included.' : ' plus VAT.') : '.');
   }
   if ((m = t.match(/^add (?:a )?note(?: that)? (.+)$/))) {
     ORDER.notes = (ORDER.notes ? ORDER.notes + '\n' : '') + m[1]; return 'Note added.';
