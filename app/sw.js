@@ -1,7 +1,7 @@
 // Keeps a copy on the phone so the book opens with no signal, but always tries
 // for a fresh one first. Cache-first looked fine and meant a new build could
 // never reach the phone - it would sit on the first copy forever.
-const C='yofield-f4a195535a24';
+const C='yofield-fd10931785ab';
 self.addEventListener('install',e=>{e.waitUntil(
   caches.open(C).then(c=>c.addAll(['./','./index.html','./manifest.json','./d-north.txt','./d-central.txt','./d-south.txt'])).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(
