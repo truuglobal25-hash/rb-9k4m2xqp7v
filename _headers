@@ -53,3 +53,21 @@
 /v3-south/index.html
   Cache-Control: no-cache
 
+/app/index.html
+  Cache-Control: no-cache
+
+/app/sw.js
+  Cache-Control: no-cache
+
+/app/d-north.txt
+  Cache-Control: no-cache
+
+/app/d-central.txt
+  Cache-Control: no-cache
+
+/app/d-south.txt
+  Cache-Control: no-cache
+
+/app/manifest.json
+  Cache-Control: no-cache
+
