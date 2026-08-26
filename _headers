@@ -16,3 +16,40 @@
 /v26/manifest.json
   Cache-Control: no-cache
 
+
+/v2/sw.js
+  Cache-Control: no-cache
+
+/v2/index.html
+  Cache-Control: no-cache
+
+/v2-central/sw.js
+  Cache-Control: no-cache
+
+/v2-central/index.html
+  Cache-Control: no-cache
+
+/v2-south/sw.js
+  Cache-Control: no-cache
+
+/v2-south/index.html
+  Cache-Control: no-cache
+
+/v3/sw.js
+  Cache-Control: no-cache
+
+/v3/index.html
+  Cache-Control: no-cache
+
+/v3-central/sw.js
+  Cache-Control: no-cache
+
+/v3-central/index.html
+  Cache-Control: no-cache
+
+/v3-south/sw.js
+  Cache-Control: no-cache
+
+/v3-south/index.html
+  Cache-Control: no-cache
+
