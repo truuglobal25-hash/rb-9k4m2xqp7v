@@ -267,7 +267,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
  .grid2{grid-template-columns:repeat(4,1fr)}
  #fab{bottom:24px}
 }
-</style>
+.tswr{display:flex;gap:6px;margin:2px 0 10px}.tsw{flex:1;height:34px;border-radius:17px;background:var(--sf);color:var(--tx);font-size:12.5px;font-weight:600;border:0;letter-spacing:.3px}.tsw.on{box-shadow:inset 0 0 0 1.5px var(--ac);color:var(--ac)}</style>
 </head><body>
 <div id="app"><div class="wrap"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
 <script>
@@ -738,6 +738,7 @@ function vToday(){
  <div class="homesearch"><input id="q" placeholder="Search name, phone, area, category…" autocomplete="off" value="${esc(Q)}">${Q?'<button class="qclear" onclick="clearQ()">✕</button>':''}</div>
  ${!Q&&recentQ().length?`<div class="preset" style="margin:2px 0 6px"><span class="meta" style="flex:0 0 auto;align-self:center">Recent:</span>${recentQ().map(r=>`<button class="chip" onclick="setQ('${esc(r).replace(/'/g,"\\'")}')">${esc(r)}</button>`).join('')}</div>`:''}
  ${res}
+ <div class="tswr">${['all','north','central','south'].map(k=>`<button class="tsw${TERR===k?' on':''}" onclick="goTerr('${k}')">${k==='all'?'All':k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
  ${TERR==='all'?`<div class="grid2" style="grid-template-columns:repeat(2,1fr)">${['north','central','south'].map(t=>{const sub=D.filter(x=>x._terr===t);const cust=sub.filter(x=>x.yol||x.myco).length;const rd=sub.filter(x=>x.t==='A').length;const cf=sub.filter(x=>x.t==='B').length;return `<div class="hcard" onclick="goTerr('${t}')"><b>${t[0].toUpperCase()+t.slice(1)}</b><span>${sub.length.toLocaleString()} records · ${cust.toLocaleString()} customers<br>${rd} ready · ${cf} call first</span></div>`}).join('')}<div class="hcard on"><b>All Trinidad</b><span>${D.length.toLocaleString()} records · ${D.filter(x=>x.yol||x.myco).length.toLocaleString()} customers</span></div></div>`:''}
  ${resume}
  ${!rtActive()&&TERR!=='all'?`<div class="row" style="gap:6px;margin:8px 0"><button class="btn gold" onclick="rtStart()">Start today's route</button>${fuDue?`<button class="btn ghost" onclick="go('follow')">Follow-ups due · ${fuDue}</button>`:''}</div>`:''}

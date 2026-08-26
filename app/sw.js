@@ -1,18 +1,11 @@
-// Keeps a copy on the phone so the book opens with no signal, but always tries
-// for a fresh one first. Cache-first looked fine and meant a new build could
-// never reach the phone - it would sit on the first copy forever.
-const C='yofield-fd10931785ab';
-self.addEventListener('install',e=>{e.waitUntil(
-  caches.open(C).then(c=>c.addAll(['./','./index.html','./manifest.json','./d-north.txt','./d-central.txt','./d-south.txt'])).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(
-  caches.keys().then(k=>Promise.all(k.filter(n=>n!==C).map(n=>caches.delete(n)))).then(()=>self.clients.claim()))});
-self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET') return;
-  e.respondWith(
-    fetch(e.request).then(res=>{
-      const copy=res.clone();
-      caches.open(C).then(c=>c.put(e.request,copy)).catch(()=>{});
-      return res;
-    }).catch(()=>
-      caches.match(e.request).then(r=>r||caches.match('./index.html'))));
-});
+// Retirement worker: the North book moved into /app/. This clears the old
+// shell cache and unregisters itself so installed phones land in the unified
+// app. IndexedDB and localStorage are untouched - visits and drafts survive.
+self.addEventListener('install',e=>self.skipWaiting());
+self.addEventListener('activate',e=>{e.waitUntil((async()=>{
+  const ks=await caches.keys();
+  await Promise.all(ks.map(k=>caches.delete(k)));
+  await self.registration.unregister();
+  const cs=await self.clients.matchAll({type:'window'});
+  cs.forEach(c=>c.navigate(c.url));
+})())});
