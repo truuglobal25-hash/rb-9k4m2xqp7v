@@ -344,8 +344,19 @@ const FD=_T==='all'?[].concat(_CFG.north.FD,_CFG.central.FD,_CFG.south.FD):_CFG[
 const DISCST=_T==='all'?_CFG.north.DISCST:_CFG[_T].DISCST;
 const COVST=_T==='all'?_CFG.north.COVST:_CFG[_T].COVST;
 const DATAVER="26 Aug 22:38";
+function _kvdb(t){return new Promise(res=>{const r=indexedDB.open('field_'+t,1);
+  r.onupgradeneeded=e=>{const d=e.target.result;
+   if(!d.objectStoreNames.contains('visits'))d.createObjectStore('visits',{keyPath:'id'});
+   if(!d.objectStoreNames.contains('photos'))d.createObjectStore('photos',{keyPath:'id'});
+   if(!d.objectStoreNames.contains('kv'))d.createObjectStore('kv',{keyPath:'k'})};
+  r.onsuccess=e=>res(e.target.result);r.onerror=()=>res(null)})}
 async function _one(t){
-  const txt=await (await fetch('../app/d-'+t+'.txt',{cache:'no-store'})).text();
+  const db=await _kvdb(t);
+  const kvGet=k=>new Promise(res=>{if(!db)return res(null);try{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result&&q.result.v||null);q.onerror=()=>res(null)}catch(_){res(null)}});
+  const kvPut=(k,v)=>{try{db&&db.transaction('kv','readwrite').objectStore('kv').put({k:k,v:v})}catch(_){}};
+  let txt=await kvGet('payload_'+t);
+  if(txt){fetch('../app/d-'+t+'.txt',{cache:'no-store'}).then(r=>r.ok?r.text():null).then(f=>{if(f&&f!==txt)kvPut('payload_'+t,f)}).catch(()=>{})}
+  else{txt=await (await fetch('../app/d-'+t+'.txt',{cache:'no-store'})).text();kvPut('payload_'+t,txt)}
   const bin=Uint8Array.from(atob(txt),c=>c.charCodeAt(0));
   const st=new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'));
   const arr=JSON.parse(await new Response(st).text());
@@ -694,6 +705,7 @@ async function vfPhoto(el){
  img.src=url}
 async function saveVisit(){
  if(!VD||!VD.outcome){toast('Choose an outcome first');return}
+ if(window._svBusy)return; window._svBusy=1; setTimeout(()=>{window._svBusy=0},1500);
  if(VD.co&&VD.co!=='No order'&&VD.outcome==='Order placed'&&!/YOL|MYCO|both/i.test(VD.outcome)){VD.outcome='Order placed · '+VD.co}
  const s=D.find(x=>x.id===VD.sid);
  const e={id:uuid(),sid:VD.sid,name:s?s.n:'',terr:(s&&s._terr)||TERR,ts:Date.now(),
@@ -1541,9 +1553,11 @@ loadDraft();
 bootField().then(()=>{
  if(!restoreUI())VIEW='today';
  render();
- if(VD&&VD.sid){toast('Unsaved visit draft restored');drawVisit()}
+ // Field-interruption fix: a saved draft must NEVER auto-open on boot/resume.
+ // It stays loaded silently; the resume capsule announces it and opens only on tap.
  const _dl=new URLSearchParams(location.search).get('sid');
- if(_dl&&D.some(x=>x.id===_dl)){SHOP=_dl;drawSheet()}
+ if(_dl&&D.some(x=>x.id===_dl)){SHOP=_dl;drawSheet();
+  try{const u=new URL(location);u.searchParams.delete('sid');history.replaceState(null,'',u)}catch(_){}}
 });
 addEventListener('online',()=>{render()});addEventListener('offline',()=>{render()});
 
@@ -1594,6 +1608,12 @@ function gsAll(v){try{sessionStorage.setItem('vu_gsq',v)}catch(_){};goTerr('all'
  if(v){sessionStorage.removeItem('vu_gsq');gSearch();gsRun(v)}}catch(_){}},350);
  if(document.readyState==='complete')go(); else addEventListener('load',go)})();
 window.gsAll=gsAll;
+addEventListener('pagehide',()=>{try{saveUI()}catch(_){}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){try{saveUI()}catch(_){}}});
+document.addEventListener('click',e=>{
+ const a=e.target.closest&&e.target.closest('a[target="_blank"],a[href^="tel:"]');
+ if(a){try{saveUI()}catch(_){}try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}}
+},{capture:true,passive:true});
 (function(){
  let sx=0,sy=0,el=null,dx=0,fired=false;
  document.addEventListener('touchstart',e=>{
@@ -1793,6 +1813,11 @@ window.goTerr=function(t){try{saveUI()}catch(_){}
  document.body.classList.add('pgout');
  localStorage.setItem('vu_terr',t);
  setTimeout(()=>{location.href=location.pathname+'?t='+t},110)};
+// permanent regression probe: current interruption invariants
+window.__qa=function(){return {wizardOpen:!!document.getElementById('visitbg'),
+ profileOpen:!!SHOP, view:VIEW, terr:TERR,
+ draftHeld:!!(VD&&VD.sid), dockState:(document.getElementById('dock')||{style:{}}).style.display||'none',
+ sidInUrl:new URLSearchParams(location.search).has('sid'), events:EV.length}};
  })();
     
   }catch(e){document.getElementById('app').innerHTML='<div class="wrap"><div class="empty"><b>Could not load data</b>'+e+'</div></div>'}
