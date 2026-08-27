@@ -320,6 +320,12 @@ body.hasdock{padding-bottom:calc(150px + var(--safe-b))}
 .oprow .rs{font-size:12.5px;color:var(--mu);margin-top:1px}
 .oprow .go{color:var(--mu2);flex:0 0 auto;font-size:17px}
 .tswr{display:none}
+
+.ribbon span{min-height:44px;display:inline-flex;align-items:baseline;gap:5px;padding:4px 0}
+.ribbon span:active{opacity:.5}
+.pk:active{background:rgba(27,26,23,.05)}
+.tband button.on{transform:scale(.99)}
+body.pgout{opacity:.5;transition:opacity .16s var(--e)}
 .tswr{display:flex;gap:0;margin:0 0 4px;border-bottom:1px solid var(--bd2)}.tsw{flex:1;height:42px;border-radius:0;background:none;color:var(--mu);font-size:13px;font-weight:600;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:.02em;font-family:inherit;cursor:pointer}.tsw.on{color:var(--tx);border-bottom-color:var(--ac);font-weight:700}.tsw:active{opacity:.55}</style>
 </head><body>
 <div id="app"><div class="wrap"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
@@ -1696,7 +1702,7 @@ function vToday(){
  const pinreq=EV.filter(e=>/Requested customer pin/i.test(e.outcome)).length;
  const doneToday=EV.filter(e=>e.date===today).length;
  const remStops=rtActive()?RT.stops.length-Object.keys(RT.done).length-Object.keys(RT.skipped).length:0;
- const newWeek=D.filter(x=>x.t&&x.t!=='D'&&x.dt&&new Date(x.dt)>Date.now()-7*864e5).length;
+ const newWeek=D.filter(newWeekOK).length;
  const ops=priOps();
  return `<header class="top">
  <div class="appbar">
@@ -1704,7 +1710,7 @@ function vToday(){
   <span class="sync ${navigator.onLine?'ok':'off'}">${navigator.onLine?'Online':'Saving locally'}</span>
  </div>
  <p class="sub">${D.length.toLocaleString()} records · updated ${DATAVER}</p>
- <div class="tband">${['all','north','central','south'].map(k=>`<button class="${TERR===k?'on':''}" onclick="goTerr('${k}')">${k==='all'?'All':k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
+ <div class="tband" role="group" aria-label="Territory">${['all','north','central','south'].map(k=>`<button class="${TERR===k?'on':''}" aria-pressed="${TERR===k}" onclick="goTerr('${k}')">${k==='all'?'All':k[0].toUpperCase()+k.slice(1)}</button>`).join('')}</div>
  <div class="homesearch"><input id="q" placeholder="Search name, phone, area…" autocomplete="off" value="${esc(Q)}">${Q?'<button class="qclear" onclick="clearQ()">✕</button>':''}</div>
  </header><div class="wrap">
  ${res}
@@ -1753,8 +1759,40 @@ function renderDock(){
  else if(typeof rtActive==='function'&&rtActive()&&VIEW!=='route'){
   h=`<span class="dico">▶</span><span class="dtxt"><b>Continue route · ${RT.idx+1}/${RT.stops.length}</b><i>${esc(RT.town||'')}</i></span><b class="dgo">›</b>`;
   d.onclick=()=>go('route')}
+ else if(VIEW!=='follow'){const today=lday();const nfu=Object.values(follows).filter(f=>f.due&&f.due<=today).length;
+  if(nfu){h=`<span class="dico">⚑</span><span class="dtxt"><b>Follow-ups due · ${nfu}</b><i>Tap to work the list</i></span><b class="dgo">›</b>`;
+  d.onclick=()=>go('follow')}}
  if(h){d.innerHTML=h;d.style.display='flex';document.body.classList.add('hasdock')}
  else{d.style.display='none';document.body.classList.remove('hasdock')}}
+
+// ===== polish pass: verified metrics, chain guard, smooth territory switch =====
+const CHAIN_RX=/\b(massy|price\s?smart|superpharm|xtra\s?foods|starlite)\b/i;
+function isChain(s){return CHAIN_RX.test(s.n||'')||/^CHAIN/.test(s.ps||'')}
+function newWeekOK(s){const ps=s.ps||'';
+ return (s.t==='A'||s.t==='B'||s.t==='C')&&s.dt&&new Date(s.dt)>Date.now()-7*864e5
+  &&!s.yol&&!s.myco&&!isChain(s)
+  &&!/^(NOT FOR US|NOT MY CUSTOMER|REJECTED|INVALID|CHAIN|DUPLICATE|POSSIBLE)/.test(ps)}
+LISTS.newdisc={t:'New This Week — verified new prospects',f:newWeekOK};
+function priOps(){
+ const today=lday(); const out=new Map();
+ const add=(s,r,w)=>{if(!s||!actionable(s)||isChain(s))return;const c=out.get(s.id);if(!c||c.w<w)out.set(s.id,{s,r,w})};
+ if(VD&&VD.sid)add(D.find(x=>x.id===VD.sid),'Unfinished visit draft — notes kept exactly as typed',110);
+ Object.entries(follows).forEach(([sid,f])=>{const s=D.find(x=>x.id===sid);
+  if(f.due&&f.due<today)add(s,'Follow-up overdue since '+f.due,100);
+  else if(f.due===today)add(s,'Follow-up due today'+(f.reason?' · '+f.reason:''),90)});
+ D.forEach(s=>{
+  if(s.yol&&!s.myco&&s.mso!=null&&s.mso<6)add(s,'Buying YOL · no MYCO account — introduce the range',70);
+  else if(s.myco&&!s.yol&&s.mso!=null&&s.mso<6)add(s,'Buying MYCO · no YOL account — introduce the range',70);
+  if((s.yol||s.myco)&&s.mso!=null&&s.mso>18)add(s,'No order in '+Math.round(s.mso)+' months — win back',60);
+  if(s.t==='A'&&newWeekOK(s))add(s,'Newly verified prospect — open the account',55);
+ });
+ const seen={};
+ return [...out.values()].sort((a,b)=>b.w-a.w).filter(o=>{seen[o.w]=(seen[o.w]||0)+1;return seen[o.w]<=2}).slice(0,5)}
+window.goTerr=function(t){try{saveUI()}catch(_){}
+ try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}
+ document.body.classList.add('pgout');
+ localStorage.setItem('vu_terr',t);
+ setTimeout(()=>{location.href=location.pathname+'?t='+t},110)};
  })();
     
   }catch(e){document.getElementById('app').innerHTML='<div class="wrap"><div class="empty"><b>Could not load data</b>'+e+'</div></div>'}
