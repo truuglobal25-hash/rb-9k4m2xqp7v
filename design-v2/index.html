@@ -50,7 +50,7 @@ header.top .homesearch{position:static}
  color:var(--tx);outline:none;-webkit-appearance:none;margin:0;font-family:inherit;box-shadow:0 1px 0 rgba(22,21,18,.08)}
 .homesearch input:focus,.search:focus{box-shadow:0 0 0 2px var(--acc)}
 .homesearch input::placeholder{color:var(--mu2)}
-.qclear{flex:0 0 auto;width:42px;height:42px;border-radius:12px;border:0;background:rgba(27,26,23,.08);
+.qclear{flex:0 0 auto;width:44px;height:44px;border-radius:12px;border:0;background:rgba(27,26,23,.08);
  color:var(--mu);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 header.top .qclear{background:rgba(244,241,234,.16);color:var(--bone)}
 .panel{background:none;border-radius:0;padding:0;margin:20px 0;font-size:14px}
@@ -67,7 +67,7 @@ header.top .qclear{background:rgba(244,241,234,.16);color:var(--bone)}
 .bkt:active{background:rgba(27,26,23,.05)}
 .bkt .meta{width:100%}
 .lhead{display:flex;align-items:center;gap:10px;margin:6px 0 4px}
-.fpill{border:1.5px solid var(--tx);background:none;color:var(--tx);border-radius:999px;height:38px;padding:0 16px;
+.fpill{border:1.5px solid var(--tx);background:none;color:var(--tx);border-radius:999px;height:44px;padding:0 16px;
  font:650 13px/1 'Outfit',sans-serif;cursor:pointer;flex:0 0 auto}
 .fpill:active{background:var(--tx);color:var(--bone)}
 .fsort{border:0;background:none;color:var(--accT);font:650 13px/1 'Outfit',sans-serif;cursor:pointer;flex:0 0 auto;padding:8px}
@@ -110,7 +110,7 @@ header.top .qclear{background:rgba(244,241,234,.16);color:var(--bone)}
 .m-audit{opacity:.58}.m-audit .st{color:var(--mu2)}
 .mini2::before{display:none}
 .acts{display:flex;gap:8px;margin-top:10px;align-items:center;width:100%}
-.acts .ab{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 15px;
+.acts .ab{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 15px;
  border-radius:10px;border:1.5px solid var(--line2);background:none;color:var(--tx);font-size:12.5px;font-weight:650;
  text-decoration:none;cursor:pointer;font-family:inherit;gap:5px}
 .acts .ab.pri{border-color:var(--tx);font-weight:750}
@@ -326,6 +326,12 @@ body.hasdock{padding-bottom:calc(150px + var(--safe-b))}
 .pk:active{background:rgba(27,26,23,.05)}
 .tband button.on{transform:scale(.99)}
 body.pgout{opacity:.5;transition:opacity .16s var(--e)}
+
+/* uniform press physics: respond on touch-down, settle on release */
+.btn,.fpill,.fchip,.chip,.acts .ab,.hcard,.tband button,nav.bot a,.pk,.rowl.bkt,.card.mini,#dock{transition:transform .06s var(--e),background .16s var(--e),color .16s var(--e),box-shadow .16s var(--e)}
+.btn:active,.fpill:active,.acts .ab:active{transform:translateY(1px) scale(.985)}
+.hcard:active,.pk:active,#dock:active{transform:scale(.988)}
+.tband button:active,nav.bot a:active,.fchip:active,.chip:active{transform:scale(.96)}
 .tswr{display:flex;gap:0;margin:0 0 4px;border-bottom:1px solid var(--bd2)}.tsw{flex:1;height:42px;border-radius:0;background:none;color:var(--mu);font-size:13px;font-weight:600;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:.02em;font-family:inherit;cursor:pointer}.tsw.on{color:var(--tx);border-bottom-color:var(--ac);font-weight:700}.tsw:active{opacity:.55}</style>
 </head><body>
 <div id="app"><div class="wrap"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
@@ -1330,7 +1336,7 @@ function bindMore(){
 function remSearch(){if(!Q||Q.length<2)return;try{const r=JSON.parse(localStorage.getItem(KEY+'_recentq')||'[]').filter(x=>x!==Q);r.unshift(Q);localStorage.setItem(KEY+'_recentq',JSON.stringify(r.slice(0,5)))}catch(e){}}
 function recentQ(){try{return JSON.parse(localStorage.getItem(KEY+'_recentq')||'[]')}catch(e){return[]}}
 function setQ(v){Q=v;render()}
-function openSheet(id){remSearch();SHOP=id;try{history.pushState(0,'')}catch(e){};drawSheet()}
+function openSheet(id){remSearch();if(SHOP===id&&document.getElementById('sheetbg'))return;SHOP=id;try{history.pushState(0,'')}catch(e){};drawSheet()}
 function closeSheet(){SHOP=null;drawSheet()}
 function openShop(id){openSheet(id)}
 let PTAB='over';
@@ -1611,9 +1617,10 @@ window.gsAll=gsAll;
 addEventListener('pagehide',()=>{try{saveUI()}catch(_){}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){try{saveUI()}catch(_){}}});
 document.addEventListener('click',e=>{
+ if(performance.now()-(window._swp||0)<420){window._swp=0;e.stopPropagation();e.preventDefault();return}
  const a=e.target.closest&&e.target.closest('a[target="_blank"],a[href^="tel:"]');
  if(a){try{saveUI()}catch(_){}try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}}
-},{capture:true,passive:true});
+},{capture:true});
 (function(){
  let sx=0,sy=0,el=null,dx=0,fired=false;
  document.addEventListener('touchstart',e=>{
@@ -1632,8 +1639,8 @@ document.addEventListener('click',e=>{
   const m=(el.getAttribute('onclick')||'').match(/openSheet\('([^']+)'/);
   el.style.transform='';el.style.boxShadow='';
   if(m&&!fired){
-   if(dx>70){fired=true;try{navigator.vibrate&&navigator.vibrate(10)}catch(_){};openVisit(m[1],'swipe')}
-   else if(dx<-70){fired=true;try{navigator.vibrate&&navigator.vibrate(10)}catch(_){};fuQuick(m[1])}}
+   if(dx>70){fired=true;window._swp=performance.now();try{navigator.vibrate&&navigator.vibrate(10)}catch(_){};openVisit(m[1],'swipe')}
+   else if(dx<-70){fired=true;window._swp=performance.now();try{navigator.vibrate&&navigator.vibrate(10)}catch(_){};fuQuick(m[1])}}
   el=null;dx=0;
  },{passive:true});
 })();
@@ -1812,7 +1819,7 @@ window.goTerr=function(t){try{saveUI()}catch(_){}
  try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}
  document.body.classList.add('pgout');
  localStorage.setItem('vu_terr',t);
- setTimeout(()=>{location.href=location.pathname+'?t='+t},110)};
+ setTimeout(()=>{location.href=location.pathname+'?t='+t},60)};
 // permanent regression probe: current interruption invariants
 window.__qa=function(){return {wizardOpen:!!document.getElementById('visitbg'),
  profileOpen:!!SHOP, view:VIEW, terr:TERR,
@@ -1820,6 +1827,7 @@ window.__qa=function(){return {wizardOpen:!!document.getElementById('visitbg'),
  sidInUrl:new URLSearchParams(location.search).has('sid'), events:EV.length}};
  })();
     
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
   }catch(e){document.getElementById('app').innerHTML='<div class="wrap"><div class="empty"><b>Could not load data</b>'+e+'</div></div>'}
 })();
 </script>
