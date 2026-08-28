@@ -1,6 +1,6 @@
-const C='v2-8e700c9bf0';
+const C='v2-13e7a59f61';
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.add('./')).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(n=>n!==C&&n.startsWith('v2-')).map(n=>caches.delete(n)))).then(()=>self.clients.claim()))});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(n=>n!==C&&n.startsWith('v2-')).map(n=>caches.delete(n)))).then(()=>self.clients.claim()).then(()=>self.clients.matchAll({type:'window'})).then(cs=>cs.forEach(c=>c.navigate(c.url))))});
 self.addEventListener('fetch',e=>{
  if(e.request.mode!=='navigate')return;
  e.respondWith(caches.match('./').then(hit=>{

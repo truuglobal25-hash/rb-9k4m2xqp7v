@@ -1617,33 +1617,12 @@ window.gsAll=gsAll;
 addEventListener('pagehide',()=>{try{saveUI()}catch(_){}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){try{saveUI()}catch(_){}}});
 document.addEventListener('click',e=>{
- if(performance.now()-(window._swp||0)<420){window._swp=0;e.stopPropagation();e.preventDefault();return}
  const a=e.target.closest&&e.target.closest('a[target="_blank"],a[href^="tel:"]');
  if(a){try{saveUI()}catch(_){}try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}}
 },{capture:true});
-(function(){
- let sx=0,sy=0,el=null,dx=0,fired=false;
- document.addEventListener('touchstart',e=>{
-  el=e.target.closest&&e.target.closest('.card.mini'); if(!el)return;
-  const t=e.touches[0]; sx=t.clientX; sy=t.clientY; dx=0; fired=false;
- },{passive:true});
- document.addEventListener('touchmove',e=>{
-  if(!el)return; const t=e.touches[0];
-  dx=t.clientX-sx; const dy=Math.abs(t.clientY-sy);
-  if(Math.abs(dx)<14||Math.abs(dx)<dy*1.4){el.style.transform='';el.style.boxShadow='';return}
-  el.style.transform='translateX('+Math.max(-84,Math.min(84,dx))+'px)';
-  el.style.boxShadow=dx>0?'inset 4px 0 0 var(--ac)':'inset -4px 0 0 var(--warn)';
- },{passive:true});
- document.addEventListener('touchend',()=>{
-  if(!el)return;
-  const m=(el.getAttribute('onclick')||'').match(/openSheet\('([^']+)'/);
-  el.style.transform='';el.style.boxShadow='';
-  if(m&&!fired){
-   if(dx>70){fired=true;window._swp=performance.now();try{navigator.vibrate&&navigator.vibrate(10)}catch(_){};openVisit(m[1],'swipe')}
-   else if(dx<-70){fired=true;window._swp=performance.now();try{navigator.vibrate&&navigator.vibrate(10)}catch(_){};fuQuick(m[1])}}
-  el=null;dx=0;
- },{passive:true});
-})();
+// Swipe-to-act gesture REMOVED 28 Aug 2026: accidental one-handed drags were opening
+// the visit wizard in the field (M&V report, 7:12am). Opening anything requires a real tap.
+
 function rtReorder(rid,beforeId){
  if(!RT)return; const st=RT.stops; const i=st.indexOf(rid); if(i<0)return;
  st.splice(i,1);
