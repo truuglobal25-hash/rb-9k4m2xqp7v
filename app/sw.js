@@ -1,11 +1,8 @@
-// Retirement worker: the North book moved into /app/. This clears the old
-// shell cache and unregisters itself so installed phones land in the unified
-// app. IndexedDB and localStorage are untouched - visits and drafts survive.
-self.addEventListener('install',e=>self.skipWaiting());
-self.addEventListener('activate',e=>{e.waitUntil((async()=>{
-  const ks=await caches.keys();
-  await Promise.all(ks.map(k=>caches.delete(k)));
-  await self.registration.unregister();
-  const cs=await self.clients.matchAll({type:'window'});
-  cs.forEach(c=>c.navigate(c.url));
-})())});
+const C='v2-357326fa7b';
+self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.add('./')).then(()=>self.skipWaiting()))});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(n=>n!==C&&(n.startsWith('v2-')||n.startsWith('yofield-'))).map(n=>caches.delete(n)))).then(()=>self.clients.claim()))});
+self.addEventListener('fetch',e=>{
+ if(e.request.mode!=='navigate')return;
+ e.respondWith(caches.match('./').then(hit=>{
+  const net=fetch(e.request).then(r=>{if(r&&r.ok){const cl=r.clone();caches.open(C).then(c=>c.put('./',cl))}return r}).catch(()=>null);
+  return hit||net.then(r=>r||new Response('offline',{status:503}))}))});
