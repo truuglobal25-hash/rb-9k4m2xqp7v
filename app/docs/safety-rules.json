@@ -1,0 +1,568 @@
+{
+ "doc": {
+  "title": "Area Visit Guidance — Management Confirmation",
+  "file": "Area_Visit_Guidance_Management_Confirmation.pdf",
+  "sha256": "76735afcfe2b574ddad466f8db5116e750dad7c3e20e1f3298e18c88db74685b",
+  "archived": "~/company-brain/documents/management/Area_Visit_Guidance_Management_Confirmation.pdf",
+  "prepared": "2026-08-26",
+  "approvedBy": "Mr. Richard",
+  "signature": "Richard Rancharitar",
+  "approved": "2026-08-28",
+  "effective": "2026-09-01",
+  "entered": "2026-08-28",
+  "total": 31,
+  "caution": 8,
+  "dnv": 23,
+  "instruction": "These areas will be updated as new information and statistics become known. Communicate with drivers for up-to-date information on dangerous side streets."
+ },
+ "rules": [
+  {
+   "id": "MG01",
+   "p": 1,
+   "area": "Lanse Mitan Street, Carenage",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Carenage"
+   ],
+   "match": [
+    "lanse mitan",
+    "lance mitan",
+    "l'anse mitan",
+    "anse mitan"
+   ],
+   "conf": "SPELLING UNCONFIRMED",
+   "note": "Source: described as a drug block. Confirm street-name spelling. No coordinates invented."
+  },
+  {
+   "id": "MG02",
+   "p": 1,
+   "area": "Big Yard, Carenage",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Carenage"
+   ],
+   "match": [
+    "big yard"
+   ],
+   "conf": "EXACT",
+   "note": "Source: hotspot."
+  },
+  {
+   "id": "MG03",
+   "p": 1,
+   "area": "Smith Hill",
+   "d": "DNV",
+   "scope": "named",
+   "terr": "north",
+   "town": [
+    "Carenage",
+    "Diego Martin",
+    "Petit Valley"
+   ],
+   "match": [
+    "smith hill"
+   ],
+   "conf": "CONTEXT REQUIRED",
+   "note": "Carenage/Diego Martin context required."
+  },
+  {
+   "id": "MG04",
+   "p": 1,
+   "area": "Andrew Trace, Diego Martin",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Diego Martin"
+   ],
+   "match": [
+    "andrew trace"
+   ],
+   "conf": "EXACT",
+   "note": "Source: hotspot."
+  },
+  {
+   "id": "MG05",
+   "p": 1,
+   "area": "Patna",
+   "d": "DNV",
+   "scope": "named",
+   "terr": "north",
+   "town": [
+    "Diego Martin",
+    "Petit Valley",
+    "Carenage",
+    "Patna"
+   ],
+   "match": [
+    "patna"
+   ],
+   "conf": "CONTEXT REQUIRED",
+   "note": "Source: hotspot. Diego Martin valley context required."
+  },
+  {
+   "id": "MG06",
+   "p": 1,
+   "area": "Cadet Hill",
+   "d": "DNV",
+   "scope": "named",
+   "terr": "north",
+   "town": [
+    "Diego Martin",
+    "Petit Valley",
+    "Carenage"
+   ],
+   "match": [
+    "cadet hill"
+   ],
+   "conf": "CONTEXT REQUIRED",
+   "note": "Source: hotspot."
+  },
+  {
+   "id": "MG07",
+   "p": 1,
+   "area": "Bamboo Lane, Diego Martin",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Diego Martin"
+   ],
+   "match": [
+    "bamboo lane"
+   ],
+   "conf": "EXACT",
+   "note": "Source: hotspot. Not the Bamboo settlement in Central."
+  },
+  {
+   "id": "MG08",
+   "p": 1,
+   "area": "Side streets off Diego Martin Main Road",
+   "d": "DNV",
+   "scope": "unresolvable",
+   "terr": "north",
+   "town": [
+    "Diego Martin"
+   ],
+   "match": [],
+   "conf": "BOUNDARY REVIEW",
+   "note": "Individual side streets not named. Diego Martin Main Road itself is NOT restricted. Confirm streets with drivers."
+  },
+  {
+   "id": "MG09",
+   "p": 1,
+   "area": "Bagatelle, Diego Martin",
+   "d": "DNV",
+   "scope": "named",
+   "terr": "north",
+   "town": [
+    "Diego Martin",
+    "Bagatelle",
+    "Petit Valley"
+   ],
+   "match": [
+    "bagatelle"
+   ],
+   "conf": "CONTEXT REQUIRED",
+   "note": "Diego Martin context required."
+  },
+  {
+   "id": "MG10",
+   "p": 1,
+   "area": "Bagatelle Road, Diego Martin",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Diego Martin",
+    "Bagatelle",
+    "Petit Valley"
+   ],
+   "match": [
+    "bagatelle road",
+    "bagatelle rd"
+   ],
+   "conf": "EXACT",
+   "note": ""
+  },
+  {
+   "id": "MG11",
+   "p": 1,
+   "area": "Lower Felicity, near the Bayside",
+   "d": "DNV",
+   "scope": "unresolvable",
+   "terr": "central",
+   "town": [
+    "Felicity",
+    "Chaguanas"
+   ],
+   "match": [
+    "lower felicity"
+   ],
+   "conf": "BOUNDARY REVIEW",
+   "note": "NOT all of Felicity. Only Lower Felicity near the Bayside. Exact boundary undefined."
+  },
+  {
+   "id": "MG12",
+   "p": 2,
+   "area": "Cocorite",
+   "d": "DNV",
+   "scope": "named",
+   "terr": "north",
+   "town": [
+    "Cocorite",
+    "Port of Spain",
+    "Diego Martin",
+    "Downtown"
+   ],
+   "match": [
+    "cocorite"
+   ],
+   "conf": "EXACT",
+   "note": "Source: extremely dangerous."
+  },
+  {
+   "id": "MG13",
+   "p": 2,
+   "area": "Laventille",
+   "d": "DNV",
+   "scope": "named",
+   "terr": "north",
+   "town": [
+    "Laventille",
+    "Port of Spain",
+    "San Juan",
+    "Downtown"
+   ],
+   "match": [
+    "laventille"
+   ],
+   "conf": "EXACT",
+   "note": ""
+  },
+  {
+   "id": "MG14",
+   "p": 2,
+   "area": "Morvant",
+   "d": "CAUTION",
+   "scope": "named",
+   "terr": "north",
+   "town": [
+    "Morvant",
+    "Port of Spain",
+    "San Juan"
+   ],
+   "match": [
+    "morvant"
+   ],
+   "conf": "EXACT",
+   "note": "Routes permitted with precautions."
+  },
+  {
+   "id": "MG15",
+   "p": 2,
+   "area": "John John",
+   "d": "DNV",
+   "scope": "named",
+   "terr": "north",
+   "town": [
+    "Laventille",
+    "Port of Spain",
+    "Downtown"
+   ],
+   "match": [
+    "john john"
+   ],
+   "conf": "EXACT",
+   "note": ""
+  },
+  {
+   "id": "MG16",
+   "p": 2,
+   "area": "Beetham",
+   "d": "DNV",
+   "scope": "named",
+   "terr": "north",
+   "town": [
+    "Beetham",
+    "Port of Spain",
+    "Laventille",
+    "Downtown"
+   ],
+   "match": [
+    "beetham"
+   ],
+   "conf": "EXACT",
+   "note": ""
+  },
+  {
+   "id": "MG17",
+   "p": 2,
+   "area": "Duncan Street, Port of Spain",
+   "d": "CAUTION",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Port of Spain",
+    "Downtown"
+   ],
+   "match": [
+    "duncan st"
+   ],
+   "conf": "EXACT",
+   "note": "Very risky area per source note; management approved caution."
+  },
+  {
+   "id": "MG18",
+   "p": 2,
+   "area": "Nelson Street, Port of Spain",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Port of Spain",
+    "Downtown"
+   ],
+   "match": [
+    "nelson st"
+   ],
+   "conf": "EXACT",
+   "note": ""
+  },
+  {
+   "id": "MG19",
+   "p": 2,
+   "area": "Charlotte Street, Port of Spain",
+   "d": "CAUTION",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Port of Spain",
+    "Downtown"
+   ],
+   "match": [
+    "charlotte st"
+   ],
+   "conf": "EXACT",
+   "note": "Very risky area per source note; management approved caution."
+  },
+  {
+   "id": "MG20",
+   "p": 2,
+   "area": "Prince Street, Port of Spain",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Port of Spain",
+    "Downtown"
+   ],
+   "match": [
+    "prince st"
+   ],
+   "conf": "EXACT",
+   "note": "MUST NOT match Princess Street anywhere (San Fernando, Siparia, etc)."
+  },
+  {
+   "id": "MG21",
+   "p": 2,
+   "area": "Piccadilly Street, Port of Spain",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Port of Spain",
+    "Downtown"
+   ],
+   "match": [
+    "piccadilly st"
+   ],
+   "conf": "EXACT",
+   "note": ""
+  },
+  {
+   "id": "MG22",
+   "p": 2,
+   "area": "Cockerton Street, Port of Spain",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Port of Spain",
+    "Downtown"
+   ],
+   "match": [
+    "cockerton st"
+   ],
+   "conf": "EXACT",
+   "note": ""
+  },
+  {
+   "id": "MG23",
+   "p": 2,
+   "area": "St. Paul Street, Port of Spain",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Port of Spain",
+    "Downtown"
+   ],
+   "match": [
+    "st paul st",
+    "saint paul st",
+    "st. paul st"
+   ],
+   "conf": "EXACT",
+   "note": ""
+  },
+  {
+   "id": "MG24",
+   "p": 2,
+   "area": "Certain parts of Maloney, Arima",
+   "d": "CAUTION",
+   "scope": "advisory",
+   "terr": "north",
+   "town": [
+    "Maloney",
+    "Arima",
+    "Trincity",
+    "D'Abadie"
+   ],
+   "match": [
+    "maloney"
+   ],
+   "conf": "BOUNDARY NOT DEFINED",
+   "note": "Exact parts undefined. Area-level amber advisory only. MG25 takes precedence for the mall."
+  },
+  {
+   "id": "MG25",
+   "p": 2,
+   "area": "Maloney Shopping Mall and the surrounding interior area",
+   "d": "DNV",
+   "scope": "landmark",
+   "terr": "north",
+   "town": [
+    "Maloney",
+    "Arima",
+    "D'Abadie"
+   ],
+   "match": [
+    "maloney shopping mall",
+    "maloney mall"
+   ],
+   "conf": "LANDMARK",
+   "note": "Takes precedence over MG24 caution."
+  },
+  {
+   "id": "MG26",
+   "p": 2,
+   "area": "Pinto Road, Arima",
+   "d": "CAUTION",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Arima",
+    "Pinto",
+    "D'Abadie"
+   ],
+   "match": [
+    "pinto road",
+    "pinto rd"
+   ],
+   "conf": "EXACT",
+   "note": "Source: hotspot. Routes permitted with precautions."
+  },
+  {
+   "id": "MG27",
+   "p": 2,
+   "area": "Aripo Hills",
+   "d": "DNV",
+   "scope": "named",
+   "terr": "north",
+   "town": [
+    "Aripo",
+    "Arima",
+    "Wallerfield"
+   ],
+   "match": [
+    "aripo hills"
+   ],
+   "conf": "EXACT",
+   "note": "Aripo Hills only, not all of Aripo."
+  },
+  {
+   "id": "MG28",
+   "p": 3,
+   "area": "Certain parts of Santa Cruz",
+   "d": "CAUTION",
+   "scope": "advisory",
+   "terr": "north",
+   "town": [
+    "Santa Cruz"
+   ],
+   "match": [
+    "santa cruz"
+   ],
+   "conf": "BOUNDARY NOT DEFINED",
+   "note": "Exact parts undefined. Area-level amber advisory only."
+  },
+  {
+   "id": "MG29",
+   "p": 3,
+   "area": "Certain parts of San Juan",
+   "d": "CAUTION",
+   "scope": "advisory",
+   "terr": "north",
+   "town": [
+    "San Juan"
+   ],
+   "match": [
+    "san juan"
+   ],
+   "conf": "BOUNDARY NOT DEFINED",
+   "note": "Exact parts undefined. Area-level amber advisory only."
+  },
+  {
+   "id": "MG30",
+   "p": 3,
+   "area": "Maraj Trace, Santa Cruz, near Ms. Patrice's location",
+   "d": "DNV",
+   "scope": "street",
+   "terr": "north",
+   "town": [
+    "Santa Cruz"
+   ],
+   "match": [
+    "maraj trace"
+   ],
+   "conf": "LOCALISED",
+   "note": "Santa Cruz only, near Ms Patrice's pin. Other Maraj Trace records elsewhere are NOT restricted. Pinned location was not a business."
+  },
+  {
+   "id": "MG31",
+   "p": 3,
+   "area": "Moruga",
+   "d": "CAUTION",
+   "scope": "named",
+   "terr": "south",
+   "town": [
+    "Moruga",
+    "Basse Terre",
+    "Marac",
+    "Grand Chemin",
+    "La Lune",
+    "St Mary's"
+   ],
+   "match": [
+    "moruga"
+   ],
+   "conf": "EXACT",
+   "note": "Routes permitted with precautions."
+  }
+ ]
+}
