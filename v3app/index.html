@@ -2007,38 +2007,63 @@ function v3Card(s,why,tone){
    ${s.p?`<a class="ico tap" href="tel:${tel(s.p)}" aria-label="Call ${esc(s.n)}">&#9742;</a>`:''}
   </div></div>`}
 
-/* ---- feed sections: real evidence only, no invented scores ---- */
+/* ---- feed sections. Headings show TOTAL numbers and "See all" opens
+   that same total. Chain branches are skipped in the suggestion cards
+   only (standing rule: head office buys, not the branch). ---- */
+function v3Reg(key,title,noun,fn){LISTS['v3'+key]={t:title,f:fn,noun:noun};return 'list:v3'+key}
 function v3Sections(){
  const today=lday(), out=[];
  const used=new Set();
- const take=(arr,n)=>{const r=[];for(const s of arr){if(used.has(s.id))continue;used.add(s.id);r.push(s);if(r.length>=n)break}return r};
  const act=s=>actionable(s)&&!isChain(s);
+ const take=(fn,n)=>{const r=[];for(const s of D){if(!fn(s)||!act(s)||used.has(s.id))continue;used.add(s.id);r.push(s);if(r.length>=n)break}return r};
+ const sec=(k,t,noun,fn,label,card,sort)=>{
+  const all=D.filter(fn); if(!all.length)return;
+  let picks=take(fn,8);
+  if(sort)picks=picks.sort(sort);
+  if(!picks.length)return;
+  out.push({k:k,t:t,n:all.length.toLocaleString()+' '+label,go:v3Reg(k,t,noun,fn),cards:picks.map(card)})};
  if(VD&&VD.sid){const s=D.find(x=>x.id===VD.sid);
   if(s)out.push({k:'draft',t:'Unfinished visit',n:'Continue where you stopped',
    cards:[[s,'Draft saved — notes kept exactly as typed','var(--accT)']]})}
  if(rtActive()){const s=D.find(x=>x.id===RT.stops[RT.idx]);
-  if(s)out.push({k:'route',t:'Today’s route',n:`Stop ${RT.idx+1} of ${RT.stops.length}`,go:'route',
+  if(s)out.push({k:'route',t:'Today\u2019s route',n:`Stop ${RT.idx+1} of ${RT.stops.length}`,go:'route',
    cards:[[s,'Your current stop','var(--accT)']]})}
- const fu=Object.entries(follows).filter(([,f])=>f.due&&f.due<=today)
-   .map(([sid,f])=>[D.find(x=>x.id===sid),f]).filter(([s])=>s);
- if(fu.length)out.push({k:'fu',t:'Follow-ups due',n:fu.length+' waiting',go:'follow',
-   cards:take(fu.map(([s])=>s),6).map(s=>[s,follows[s.id].due<today?'Overdue since '+follows[s.id].due:'Due today','var(--neg)'])});
- const cross=D.filter(s=>act(s)&&s.mso!=null&&s.mso<6&&((s.yol&&!s.myco)||(s.myco&&!s.yol)));
- if(cross.length)out.push({k:'cross',t:'One company only',n:cross.length+' buying customers',go:'list:onlyyol',
-   cards:take(cross,8).map(s=>[s,s.yol?'Buying YOL — introduce MYCO':'Buying MYCO — introduce YOL','var(--slate)'])});
- const lap=D.filter(s=>act(s)&&(s.yol||s.myco)&&s.mso!=null&&s.mso>18).sort((a,b)=>a.mso-b.mso);
- if(lap.length)out.push({k:'lap',t:'Win back',n:lap.length+' lapsed customers',go:'list:lapsed',
-   cards:take(lap,8).map(s=>[s,'No order in '+Math.round(s.mso)+' months','var(--neg)'])});
- const dor=D.filter(s=>act(s)&&(s.yol||s.myco)&&s.mso!=null&&s.mso>=6&&s.mso<=18).sort((a,b)=>b.mso-a.mso);
- if(dor.length)out.push({k:'dor',t:'Slipping away',n:dor.length+' dormant customers',go:'list:dormant',
-   cards:take(dor,8).map(s=>[s,'Last order '+Math.round(s.mso)+' months ago','var(--amb)'])});
- const nw=D.filter(newWeekOK).filter(act);
- if(nw.length)out.push({k:'new',t:'Newly verified',n:nw.length+' found this week',go:'list:newdisc',
-   cards:take(nw,8).map(s=>[s,(s.cat?'Verified '+s.cat.toLowerCase():'Verified new shop'),'var(--pos)'])});
- const rdy=D.filter(s=>s.t==='A'&&act(s));
- if(rdy.length)out.push({k:'rdy',t:'Ready to visit',n:rdy.length+' verified prospects',go:'list:tierA',
-   cards:take(rdy,8).map(s=>[s,'Verified location — safe to route','var(--pos)'])});
+ sec('fu','Follow-ups due','follow-ups due',
+   s=>!!(follows[s.id]&&follows[s.id].due&&follows[s.id].due<=today),'waiting',
+   s=>[s,follows[s.id].due<today?'Overdue since '+follows[s.id].due:'Due today','var(--neg)']);
+ sec('cross','One company only','buying customers with only one company',
+   s=>s.mso!=null&&s.mso<6&&((s.yol&&!s.myco)||(s.myco&&!s.yol)),'buying customers',
+   s=>[s,s.yol?'Buying YOL — introduce MYCO':'Buying MYCO — introduce YOL','var(--slate)']);
+ sec('lap','Win back','lapsed customers',
+   s=>(s.yol||s.myco)&&s.mso!=null&&s.mso>18,'lapsed customers',
+   s=>[s,'No order in '+Math.round(s.mso)+' months','var(--neg)'],(a,b)=>a.mso-b.mso);
+ sec('dor','Slipping away','dormant customers',
+   s=>(s.yol||s.myco)&&s.mso!=null&&s.mso>=6&&s.mso<=18,'dormant customers',
+   s=>[s,'Last order '+Math.round(s.mso)+' months ago','var(--amb)'],(a,b)=>b.mso-a.mso);
+ sec('new','Newly verified','shops verified this week',
+   s=>newWeekOK(s),'found this week',
+   s=>[s,(s.cat?'Verified '+s.cat.toLowerCase():'Verified new shop'),'var(--pos)']);
+ sec('rdy','Ready to visit','verified prospects',
+   s=>s.t==='A','verified prospects',
+   s=>[s,'Verified location — safe to route','var(--pos)']);
  return out}
+
+/* ---- list header says what the list IS, and is honest about exclusions ---- */
+const V3NOUN={allcust:'customers',active:'active customers',dormant:'dormant customers',
+ lapsed:'lapsed customers',noorder:'accounts that never ordered',lost:'lost customers',
+ onlyyol:'YOL customers with no MYCO account',onlymyco:'MYCO customers with no YOL account',
+ both:'customers buying both',tierA:'verified prospects',tierB:'call-first prospects',
+ tierC:'check-while-nearby prospects',tierD:'records needing research',
+ newdisc:'shops verified this week',review:'records to review',audit:'records preserved, never routed',
+ mgx:'restricted by management',mgc:'caution areas',mgb:'awaiting boundary confirmation',
+ locres:'customers needing a location',recvis:'visited in the last 7 days',recadd:'added in the last 30 days'};
+function vList(k){const P=LISTS[k];if(!P)return vToday();
+ const base=D.filter(P.f);
+ const noun=P.noun||V3NOUN[k]||'records';
+ return `<header class="top"><div class="ovl">${esc(TITLE)}</div><h1>${P.t}</h1>
+ <p class="sub">${base.length.toLocaleString()} ${esc(noun)} · ${esc(TITLE)}</p></header><div class="wrap">
+ ${listBody(base)}
+ </div>`}
 
 /* ---- V3 home feed ---- */
 function vToday(){
