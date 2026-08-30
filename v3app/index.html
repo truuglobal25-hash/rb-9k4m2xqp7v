@@ -2065,6 +2065,57 @@ function vList(k){const P=LISTS[k];if(!P)return vToday();
  ${listBody(base)}
  </div>`}
 
+/* ---- every number, real totals, each row opens its list ---- */
+function v3Totals(){
+ const today=lday();
+ const n=f=>D.filter(f).length;
+ const row=(k,label,fn)=>{const c=n(fn);return `<div class="rowl bkt tap" onclick="go('${k}')"><span class="lbl">${label}</span><b>${c.toLocaleString()}</b></div>`};
+ const R=(key,title,noun,fn)=>v3Reg(key,title,noun,fn);
+ const cust=s=>!!(s.yol||s.myco);
+ const fuDue=Object.values(follows).filter(f=>f.due&&f.due<=today).length;
+ const fuOver=Object.values(follows).filter(f=>f.due&&f.due<today).length;
+ const totalRec=D.length, totalCust=n(cust), totalProsp=n(s=>!cust(s)&&s.t&&s.t!=='D');
+ return `
+ <div class="panel"><b>${esc(TITLE).toUpperCase()} · EVERY NUMBER</b>
+  ${row(v3Reg('allrec2','All records','records on the books',()=>true),'All records on the books',()=>true)}
+  ${row(v3Reg('cust2','Existing customers','existing customers',cust),'Existing customers',cust)}
+  ${row(v3Reg('prosp2','Prospects','prospects, not yet customers',s=>!cust(s)&&s.t&&s.t!=='D'),'Prospects (not yet customers)',s=>!cust(s)&&s.t&&s.t!=='D')}
+ </div>
+ <div class="panel"><b>CUSTOMER RELATIONSHIP</b>
+  ${row(R('act2','Active customers','active customers',s=>cust(s)&&s.mso!=null&&s.mso<6),'Active · ordered within 6 months',s=>cust(s)&&s.mso!=null&&s.mso<6)}
+  ${row(R('dor2','Dormant customers','dormant customers',s=>cust(s)&&s.mso!=null&&s.mso>=6&&s.mso<=18),'Dormant · 6 to 18 months',s=>cust(s)&&s.mso!=null&&s.mso>=6&&s.mso<=18)}
+  ${row(R('lap2','Lapsed customers','lapsed customers',s=>cust(s)&&s.mso!=null&&s.mso>18),'Lapsed · over 18 months',s=>cust(s)&&s.mso!=null&&s.mso>18)}
+  ${row(R('nord2','Account open, never ordered','accounts that never ordered',s=>/^ACCOUNT EXISTS/.test(s.ps||'')),'Account open · never ordered',s=>/^ACCOUNT EXISTS/.test(s.ps||''))}
+  ${row(R('lost2','Lost-customer recovery','lost customers',s=>(s.eng||[]).includes('lost')),'Lost-customer recovery',s=>(s.eng||[]).includes('lost'))}
+ </div>
+ <div class="panel"><b>YOL AND MYCO</b>
+  ${row(R('oy2','YOL only','YOL customers with no MYCO account',s=>s.yol&&!s.myco),'YOL only · introduce MYCO',s=>s.yol&&!s.myco)}
+  ${row(R('om2','MYCO only','MYCO customers with no YOL account',s=>s.myco&&!s.yol),'MYCO only · introduce YOL',s=>s.myco&&!s.yol)}
+  ${row(R('both2','Buying both companies','customers buying both',s=>s.yol&&s.myco),'Buying both companies',s=>s.yol&&s.myco)}
+ </div>
+ <div class="panel"><b>NEW BUSINESS</b>
+  ${row(R('rdy2','Ready to visit','verified prospects',s=>s.t==='A'),'Ready to visit',s=>s.t==='A')}
+  ${row(R('cf2','Call first','call-first prospects',s=>s.t==='B'),'Call first',s=>s.t==='B')}
+  ${row(R('cn2','Check while nearby','check-while-nearby prospects',s=>s.t==='C'),'Check while nearby',s=>s.t==='C')}
+  ${row(R('nw2','Verified this week','shops verified this week',s=>newWeekOK(s)),'Verified this week',s=>newWeekOK(s))}
+  ${row(R('res2','Research required','records needing research',s=>s.t==='D'),'Research required',s=>s.t==='D')}
+ </div>
+ <div class="panel"><b>NEEDS YOUR ATTENTION</b>
+  <div class="rowl bkt tap" onclick="go('follow')"><span class="lbl">Follow-ups due</span><b>${fuDue.toLocaleString()}</b></div>
+  <div class="rowl bkt tap" onclick="go('follow')"><span class="lbl">Follow-ups overdue</span><b style="color:${fuOver?'var(--neg)':'inherit'}">${fuOver.toLocaleString()}</b></div>
+  ${row(R('rev2','Possible existing customer','records to review',s=>s.mr===1||s.mr==='1'),'Possible existing customer · review',s=>s.mr===1||s.mr==='1')}
+  ${row(R('loc2','Customers needing a location','customers needing a location',s=>/LOCATION RESEARCH/.test(s.ps||'')),'Customers needing a location',s=>/LOCATION RESEARCH/.test(s.ps||''))}
+  <div class="rowl bkt tap" onclick="go('fieldwork')"><span class="lbl">Visits saved on this phone</span><b>${EV.length.toLocaleString()}</b></div>
+ </div>
+ <div class="panel"><b>MANAGEMENT SAFETY${mgLive()?'':' · FROM 1 SEP'}</b>
+  ${row(R('mgx2','Do not visit','restricted by management',s=>!!(s.mg&&s.mg.d==='X')),'Do not visit · excluded from routes',s=>!!(s.mg&&s.mg.d==='X'))}
+  ${row(R('mgc2','Proceed with caution','records in caution areas',s=>!!(s.mg&&(s.mg.d==='C'||s.mg.d==='A'))),'Proceed with caution',s=>!!(s.mg&&(s.mg.d==='C'||s.mg.d==='A')))}
+  ${row(R('mgb2','Boundary review','awaiting boundary confirmation',s=>!!s.mgr),'Boundary review · location not confirmed',s=>!!s.mgr)}
+ </div>
+ <div class="panel"><b>PRESERVED, NEVER ROUTED</b>
+  ${row(R('aud2','Audit only','records preserved, never routed',s=>!actionable(s)),'Audit only · kept on file',s=>!actionable(s))}
+ </div>`}
+
 /* ---- V3 home feed ---- */
 function vToday(){
  const today=lday();
@@ -2098,6 +2149,7 @@ function vToday(){
    <div class="fsec-h"><b>${esc(sec.t)}</b><span>${esc(sec.n)}</span>${sec.go?`<button class="more tap" onclick="go('${sec.go}')">See all</button>`:''}</div>
    <div class="frail">${sec.cards.map(([s,w,c])=>v3Card(s,w,c)).join('')}</div>
   </section>`).join('')}
+ ${Q?'':v3Totals()}
  ${!Q&&restricted?`<div class="panel"><b>MANAGEMENT GUIDANCE</b>
    <div class="rowl bkt tap" onclick="go('mgmt')"><span class="lbl">${restricted} restricted · ${MGDOC.caution} caution areas${mgLive()?'':' · from 1 Sep'}</span><b>›</b></div></div>`:''}
  ${!Q&&!secs.length?`<div class="empty"><b>Nothing waiting</b>No follow-ups, drafts or opportunities in ${esc(TITLE)} right now.</div>`:''}
