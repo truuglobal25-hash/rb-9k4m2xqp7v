@@ -2257,9 +2257,9 @@ window.v3Apply=v3Apply;
  sr.setAttribute('aria-live','polite');document.body.appendChild(sr);
 })();
 /* ================= DATA-AUDIT CANDIDATE OVERRIDES =================
-   Every published figure carries its own noun. Every tile opens a list
-   built from the identical predicate, so the tile and the list can never
-   disagree. Nothing here changes a record: definitions only.        */
+   MAIN TOTAL = every stored record in the selected territory.
+   Every tile registers the same predicate its list uses, so a tile and its
+   list can never disagree. Nothing here changes a record: definitions only. */
 
 const AU_CUST = s => !!(s.yol||s.myco);
 const AU_ACT  = s => actionable(s);
@@ -2271,17 +2271,21 @@ const AU_P = {
   res  : s => !AU_CUST(s) &&  AU_ACT(s) && s.t==='D',
   rev  : s => !AU_CUST(s) &&  AU_ACT(s) && s.t!=='A'&&s.t!=='B'&&s.t!=='C'&&s.t!=='D'
 };
-/* order-age guard: a shop with a recorded order age is counted by its age,
-   never again under "never ordered". Neither field was altered.        */
+/* order-age guard: a shop with a recorded order age is counted by that age,
+   never again under "never ordered". Neither field was altered. */
 const AU_NEVER = s => AU_CUST(s) && s.mso==null && /^ACCOUNT EXISTS/.test(s.ps||'');
 
-function auKey(s){return ((s.n||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim())
-                       +'|'+((s.town||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim())}
-function auDistinct(fn){const k=new Set();for(const s of D)if(fn(s))k.add(auKey(s));return k.size}
+const auN = x => (x||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+/* a business key is name + area, matched only inside one territory —
+   name alone is never enough, and distance is never evidence */
+function auKey(s){return (s._terr||TERR)+'|'+auN(s.n)+'|'+auN(s.town)}
+function auDedupe(rows){const seen=new Set();return rows.filter(s=>{const k=auKey(s);if(seen.has(k))return false;seen.add(k);return true})}
+function auBiz(fn){return auDedupe(D.filter(fn)).length}
 
-/* list header states the exact count, the noun, and the definition */
+/* list header states the exact count, the noun, and the definition.
+   A deduped tile opens a deduped list, so the two always agree. */
 function vList(k){const P=LISTS[k];if(!P)return vToday();
- const base=D.filter(P.f);
+ let base=D.filter(P.f); if(P.dedupe)base=auDedupe(base);
  const noun=P.noun||V3NOUN[k]||'records';
  return `<header class="top"><div class="ovl">${esc(TITLE)}</div><h1>${P.t}</h1>
  <p class="sub">${base.length.toLocaleString()} ${esc(noun)} · ${esc(TITLE)}</p>
@@ -2289,70 +2293,84 @@ function vList(k){const P=LISTS[k];if(!P)return vToday();
  ${listBody(base)}
  </div>`}
 
-function auReg(key,title,noun,def,fn){LISTS['au'+key]={t:title,f:fn,noun:noun,def:def};return 'list:au'+key}
+function auReg(key,title,noun,def,fn,dedupe){LISTS['au'+key]={t:title,f:fn,noun:noun,def:def,dedupe:!!dedupe};return 'list:au'+key}
+function auWhere(){return TERR==='all'?'across All Trinidad':'in '+TITLE.replace(/ Route$/,'')}
+
+/* ---- BUSINESS DIRECTORY — the main total is every stored record ---- */
+function vCustomers(){
+ const total=D.length;
+ const L=Q?searchAll(D):null;                        // searches EVERY record, not customers only
+ return `<header class="top"><div class="ovl">${esc(TITLE)}</div><h1>Business Directory</h1>
+ <p class="sub"><b style="font-size:17px">${total.toLocaleString()} total records ${esc(auWhere())}</b></p>
+ <p class="sub" style="opacity:.72">Every business kept on file — customers, prospects, research and audit records. This total never changes when you search or filter.</p>
+ </header><div class="wrap">
+ <div class="homesearch"><input id="q" placeholder="Search every record — name, area or phone" autocomplete="off" aria-label="Search every record" value="${esc(Q)}">${Q?'<button class="qclear tap" onclick="clearQ()" aria-label="Clear search">✕</button>':''}</div>
+ ${Q?`<div class="panel"><b>${L.length.toLocaleString()} MATCHING RECORDS · of ${total.toLocaleString()} ${esc(auWhere())}</b>
+   ${L.length?listChunk(L):`<div class="empty"><b>No matches for "${esc(Q)}"</b>Try fewer words or another spelling.</div>`}</div>`
+  :v3Totals()}
+ </div>`}
 
 function v3Totals(){
  const today=lday();
- const n=f=>D.filter(f).length;
- const r=(key,title,label,noun,def,fn)=>{
-   const c=n(fn), go=auReg(key,title,noun,def,fn);
+ const r=(key,title,label,noun,def,fn,dedupe)=>{
+   const c=dedupe?auBiz(fn):D.filter(fn).length, go=auReg(key,title,noun,def,fn,dedupe);
    return `<div class="rowl bkt tap" onclick="go('${go}')"><span class="lbl">${label}</span><b>${c.toLocaleString()}</b></div>`};
  const fuDue =Object.values(follows).filter(f=>f.due&&f.due<=today).length;
  const fuOver=Object.values(follows).filter(f=>f.due&&f.due< today).length;
- const C=n(AU_P.cust), P=n(AU_P.prosp), R=n(AU_P.res), A=n(AU_P.audit), V=n(AU_P.rev), T=D.length;
- const sum=C+P+R+A+V;
- const custBiz=auDistinct(AU_P.cust), allBiz=auDistinct(()=>true);
+ const C=D.filter(AU_P.cust).length, P=D.filter(AU_P.prosp).length, R=D.filter(AU_P.res).length,
+       A=D.filter(AU_P.audit).length, V=D.filter(AU_P.rev).length, T=D.length, sum=C+P+R+A+V;
+ const cb=auBiz(AU_P.cust), ab=auBiz(()=>true);
+ const per=t=>auDedupe(D.filter(s=>s._terr===t&&AU_P.cust(s))).length;
+ const split=TERR==='all'
+   ? `${per('north').toLocaleString()} North + ${per('central').toLocaleString()} Central + ${per('south').toLocaleString()} South = ${(per('north')+per('central')+per('south')).toLocaleString()}`
+   : '';
  return `
- <div class="panel"><b>${esc(TITLE).toUpperCase()} · THE FOUR REAL TOTALS</b>
-  ${r('cust','Existing customer records','Existing customer records','existing customer records',
-      'a record carrying a YOL or a MYCO account',AU_P.cust)}
-  ${r('prosp','Genuine prospects','Genuine prospects (no account yet)','genuine prospects',
-      'no YOL or MYCO account, kept for routing, graded Ready to visit / Call first / Check while nearby',AU_P.prosp)}
-  ${r('res','Research required','Research required before visiting','records needing research',
-      'no account, kept for routing, not yet graded — location or category still unknown',AU_P.res)}
-  ${r('aud','Audit only','Audit only — preserved, never routed','records preserved on file',
-      'kept permanently for the record, excluded from every route and every prospect total',AU_P.audit)}
+ <div class="panel"><b>PRIMARY CLASSIFICATION · every record sits in exactly one</b>
+  ${r('cust','Existing customer records','Existing customers','existing customer records','a record carrying a YOL or a MYCO account',AU_P.cust)}
+  ${r('custb','Existing customer businesses','  of which distinct businesses','existing customer businesses','one business per name and area within a territory — a shop buying from both companies counts once, and same-shop rows count once',AU_P.cust,true)}
+  ${r('prosp','Genuine prospects','Genuine prospects (no account yet)','genuine prospects','no YOL or MYCO account, kept for routing, graded Ready to visit / Call first / Check while nearby',AU_P.prosp)}
+  ${r('res','Research required','Research required before visiting','records needing research','no account, kept for routing, not yet graded — location or category still unknown',AU_P.res)}
+  ${r('inrev','In review','In review · not yet classified','records in review','no account, kept for routing, status still needs a human decision',AU_P.rev)}
+  ${r('aud','Audit only','Audit only — preserved, never routed','records preserved on file','kept permanently for the record, excluded from every route and every prospect total',AU_P.audit)}
+  <div class="rowl"><span class="lbl" style="font-variant-numeric:tabular-nums">${C.toLocaleString()} + ${P.toLocaleString()} + ${R.toLocaleString()} + ${V.toLocaleString()} + ${A.toLocaleString()} = ${sum.toLocaleString()}</span><b style="color:${sum===T?'var(--pos)':'var(--neg)'}">${sum===T?'exact':'MISMATCH'}</b></div>
  </div>
- <div class="panel"><b>CUSTOMER RELATIONSHIP · adds up to ${C.toLocaleString()}</b>
+ <div class="panel"><b>SUBCATEGORY OF EXISTING CUSTOMERS · adds up to ${C.toLocaleString()}</b>
   ${r('act','Active customers','Active · ordered within 6 months','active customer records','a customer record with an order age under 6 months',s=>AU_CUST(s)&&s.mso!=null&&s.mso<6)}
   ${r('dor','Dormant customers','Dormant · 6 to 18 months','dormant customer records','a customer record with an order age of 6 to 18 months',s=>AU_CUST(s)&&s.mso!=null&&s.mso>=6&&s.mso<=18)}
   ${r('lap','Lapsed customers','Lapsed · over 18 months','lapsed customer records','a customer record with an order age over 18 months',s=>AU_CUST(s)&&s.mso!=null&&s.mso>18)}
   ${r('nord','Account open, never ordered','Account open · no order on record','customer records with no order','an account with no order age recorded — shops that DO have an order age are counted by that age instead',AU_NEVER)}
-  ${r('unk','Order history unconfirmed','Order history unconfirmed · review','customer records to check','a customer record with no order age and no "account exists" status — the order history could not be confirmed',s=>AU_CUST(s)&&s.mso==null&&!/^ACCOUNT EXISTS/.test(s.ps||''))}
+  ${r('unk','Order history unconfirmed','Order history unconfirmed · review','customer records to check','a customer record with no order age and no "account exists" status',s=>AU_CUST(s)&&s.mso==null&&!/^ACCOUNT EXISTS/.test(s.ps||''))}
  </div>
- <div class="panel"><b>YOL AND MYCO · adds up to ${C.toLocaleString()}</b>
+ <div class="panel"><b>SUBCATEGORY OF EXISTING CUSTOMERS · adds up to ${C.toLocaleString()}</b>
   ${r('oy','YOL only','YOL only · introduce MYCO','YOL-only customer records','a YOL account with no MYCO account',s=>s.yol&&!s.myco)}
   ${r('om','MYCO only','MYCO only · introduce YOL','MYCO-only customer records','a MYCO account with no YOL account',s=>s.myco&&!s.yol)}
-  ${r('bo','Buying both companies','Buying both companies','customer records buying both','an account on both YOL and MYCO',s=>s.yol&&s.myco)}
+  ${r('bo','Buying both companies','Buying both companies','customer records buying both','one record holding both a YOL and a MYCO account — counted once',s=>s.yol&&s.myco)}
  </div>
- <div class="panel"><b>NEW BUSINESS · adds up to ${P.toLocaleString()}</b>
+ <div class="panel"><b>SUBCATEGORY OF GENUINE PROSPECTS · adds up to ${P.toLocaleString()}</b>
   ${r('rdy','Ready to visit','Ready to visit','ready-to-visit prospects','a graded prospect with a verified location',s=>AU_P.prosp(s)&&s.t==='A')}
   ${r('cf','Call first','Call first','call-first prospects','a graded prospect that should be phoned before travelling',s=>AU_P.prosp(s)&&s.t==='B')}
   ${r('cn','Check while nearby','Check while nearby','check-while-nearby prospects','a graded prospect worth a look when already in the area',s=>AU_P.prosp(s)&&s.t==='C')}
  </div>
- <div class="panel"><b>OVERLAYS · these cross the totals above and are never added to them</b>
-  <div class="rowl"><span class="lbl" style="opacity:.75">Each row below tags records that are already counted once in the four totals.</span></div>
-  ${r('nw','Verified this week','Verified this week','prospects verified this week','a prospect first recorded within the last 7 days — already inside Genuine prospects',s=>newWeekOK(s))}
-  ${r('lost','Lost-customer recovery','Lost-customer recovery · overlaps customer statuses','records tagged lost','a recovery tag — overlaps Dormant, Lapsed and non-customer records, never added to any total',s=>(s.eng||[]).includes('lost'))}
-  ${r('rev','Possible existing customer','Possible existing customer · needs review','records to review','flagged as possibly matching an account already on the books',s=>s.mr===1||s.mr==='1')}
+ <div class="panel"><b>OVERLAPPING TAGS · already counted above · never added to any total</b>
+  ${r('nw','Verified this week','Verified this week','prospects verified this week','a prospect first recorded within the last 7 days',s=>newWeekOK(s))}
+  ${r('lost','Lost-customer recovery','Lost-customer recovery','records tagged lost','a recovery opportunity — overlaps Dormant, Lapsed and non-customer records',s=>(s.eng||[]).includes('lost'))}
+  ${r('rev','Possible existing customer','Possible existing customer · review','records to review','flagged as possibly matching an account already on the books',s=>s.mr===1||s.mr==='1')}
   ${r('loc','Location research','Location not confirmed','records needing a location','the shop is known but its location is not confirmed',s=>/LOCATION RESEARCH/.test(s.ps||''))}
  </div>
- <div class="panel"><b>MANAGEMENT SAFETY · overlay${mgLive()?'':' · in force from 1 Sep'}</b>
-  ${r('mgx','Do not visit','Do not visit · excluded from routes','records restricted by management','Mr. Richard’s signed area ruling — an overlay, never added to a customer or prospect total',s=>!!(s.mg&&s.mg.d==='X'))}
-  ${r('mgc','Proceed with caution','Proceed with caution','records in caution areas','Mr. Richard’s signed area ruling — an overlay, never added to a customer or prospect total',s=>!!(s.mg&&(s.mg.d==='C'||s.mg.d==='A')))}
-  ${r('mgb','Boundary review','Boundary review · location not confirmed','records awaiting boundary confirmation','the area ruling may apply but the location is not confirmed — held for confirmation',s=>!!s.mgr)}
+ <div class="panel"><b>SAFETY OVERLAY · already counted above${mgLive()?'':' · in force from 1 Sep'}</b>
+  ${r('mgx','Do not visit','Do not visit · excluded from routes','records restricted by management','Mr. Richard’s signed area ruling — never added to a customer or prospect total',s=>!!(s.mg&&s.mg.d==='X'))}
+  ${r('mgc','Proceed with caution','Proceed with caution','records in caution areas','Mr. Richard’s signed area ruling — never added to a customer or prospect total',s=>!!(s.mg&&(s.mg.d==='C'||s.mg.d==='A')))}
+  ${r('mgb','Boundary review','Boundary review · location not confirmed','records awaiting boundary confirmation','the area ruling may apply but the location is not confirmed',s=>!!s.mgr)}
  </div>
- <div class="panel"><b>YOUR OWN WORK · events, not businesses</b>
+ <div class="panel"><b>WORKFLOW EVENTS · things you did · never counted as businesses</b>
   <div class="rowl bkt tap" onclick="go('follow')"><span class="lbl">Follow-ups due</span><b>${fuDue.toLocaleString()}</b></div>
   <div class="rowl bkt tap" onclick="go('follow')"><span class="lbl">Follow-ups overdue</span><b style="color:${fuOver?'var(--neg)':'inherit'}">${fuOver.toLocaleString()}</b></div>
   <div class="rowl bkt tap" onclick="go('fieldwork')"><span class="lbl">Visits saved on this phone</span><b>${EV.length.toLocaleString()}</b></div>
-  <div class="rowl"><span class="lbl" style="opacity:.75">A visit, a follow-up and a draft are things you did. They are never counted as shops.</span></div>
  </div>
  <div class="panel"><b>DATA SUMMARY</b>
-  ${r('inrev','In review, not yet classified','In review · not yet classified','records in review','no account, kept for routing, but the status still needs a human decision (possible duplicate, possible customer, category conflict)',AU_P.rev)}
   ${r('allrec','All stored records','All stored records','total stored records','every row held in this territory, whatever its status',()=>true)}
-  <div class="rowl"><span class="lbl" style="font-variant-numeric:tabular-nums">${C.toLocaleString()} + ${P.toLocaleString()} + ${R.toLocaleString()} + ${A.toLocaleString()} + ${V.toLocaleString()} = ${sum.toLocaleString()}</span><b style="color:${sum===T?'var(--pos)':'var(--neg)'}">${sum===T?'exact':'MISMATCH'}</b></div>
-  <div class="rowl"><span class="lbl" style="opacity:.75">${T.toLocaleString()} stored records resolve to ${allBiz.toLocaleString()} distinct name-and-area businesses; the ${C.toLocaleString()} customer records resolve to ${custBiz.toLocaleString()}. The difference is same-shop rows kept apart on purpose — none were merged, none were deleted.</span></div>
+  ${split?`<div class="rowl"><span class="lbl" style="font-variant-numeric:tabular-nums">Customer businesses: ${split}</span><b style="color:var(--pos)">exact</b></div>`:''}
+  <div class="rowl"><span class="lbl" style="opacity:.75">${T.toLocaleString()} stored records resolve to ${ab.toLocaleString()} distinct name-and-area businesses; the ${C.toLocaleString()} customer records resolve to ${cb.toLocaleString()}. Same-shop rows were kept apart on purpose — none were merged, none were deleted.${TERR==='all'?' Three customer businesses are currently filed in both North and South (all in Oropouche) and are counted in each; they need a territory ruling.':''}</span></div>
  </div>`}
  })();
     
