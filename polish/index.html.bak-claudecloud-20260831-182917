@@ -4,8 +4,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="icon" href="icon-192.png" type="image/png">
 <meta name="theme-color" content="#161512">
 
 <title>Yusuf Overseas Field</title>
@@ -604,15 +602,8 @@ async function _one(t){
   const kvGet=k=>new Promise(res=>{if(!db)return res(null);try{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result&&q.result.v||null);q.onerror=()=>res(null)}catch(_){res(null)}});
   const kvPut=(k,v)=>{try{db&&db.transaction('kv','readwrite').objectStore('kv').put({k:k,v:v})}catch(_){}};
   let txt=await kvGet('payload_'+t);
-  const _dv=await kvGet('dv_'+t);
-  /* Stamp the cached payload with the build's DATAVER. When it matches, the
-     server copy is byte-identical to what we already hold, so make NO request
-     at all - this used to re-download ~2.7MB on every open just to compare
-     strings and throw the result away. Stamp only after a fetch that actually
-     succeeded: stamping on a failed response would mark stale data fresh for
-     the whole life of the build. */
-  if(!txt){txt=await (await fetch('../app/d-'+t+'.txt',{cache:'no-store'})).text();kvPut('payload_'+t,txt);kvPut('dv_'+t,DATAVER)}
-  else if(_dv!==DATAVER){fetch('../app/d-'+t+'.txt',{cache:'no-store'}).then(r=>r.ok?r.text():null).then(f=>{if(f===null)return;if(f!==txt)kvPut('payload_'+t,f);kvPut('dv_'+t,DATAVER)}).catch(err=>console.warn('[data] revalidate failed for',t,err))}
+  if(txt){fetch('../app/d-'+t+'.txt',{cache:'no-store'}).then(r=>r.ok?r.text():null).then(f=>{if(f&&f!==txt)kvPut('payload_'+t,f)}).catch(()=>{})}
+  else{txt=await (await fetch('../app/d-'+t+'.txt',{cache:'no-store'})).text();kvPut('payload_'+t,txt)}
   const bin=Uint8Array.from(atob(txt),c=>c.charCodeAt(0));
   const st=new Blob([bin]).stream().pipeThrough(new DecompressionStream('gzip'));
   const arr=JSON.parse(await new Response(st).text());
@@ -2566,23 +2557,8 @@ function v3Card(s,why,tone){
   </div></div>`}
  })();
     
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(err=>console.error('[sw] registration failed:',err));
-  }catch(e){
-    /* A first open with no signal used to dead-end here with no way back.
-       Say what happened, offer a retry, recover on its own when signal
-       returns. Match the real per-engine network errors - Chrome "Failed to
-       fetch", Safari "Load failed", Firefox "NetworkError" - not the bare
-       word "load", which appears in plenty of ordinary JS errors. */
-    var _s=String(e);
-    var _off=(!navigator.onLine)||/failed to fetch|load failed|networkerror/i.test(_s);
-    var _msg=_off?'The route book needs a signal the first time you open it. After that it works offline.':_s.replace(/[<>&]/g,'');
-    document.getElementById('app').innerHTML='<div class="wrap"><div class="empty">'
-      +'<b>'+(_off?'No connection':'Could not load data')+'</b>'
-      +'<div style="margin:8px 0 16px;font-size:13px;line-height:1.5;opacity:.75">'+_msg+'</div>'
-      +'<button class="tap" onclick="location.reload()" style="min-height:44px;padding:0 20px">Try again</button>'
-      +'</div></div>';
-    window.addEventListener('online',function(){location.reload()},{once:true});
-  }
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }catch(e){document.getElementById('app').innerHTML='<div class="wrap"><div class="empty"><b>Could not load data</b>'+e+'</div></div>'}
 })();
 </script>
 </body></html>

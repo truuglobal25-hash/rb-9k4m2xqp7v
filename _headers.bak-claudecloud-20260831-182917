@@ -10,15 +10,6 @@
 /v26/sw.js
   Cache-Control: no-cache
 
-/polish/sw.js
-  Cache-Control: no-cache
-
-/polish/index.html
-  Cache-Control: no-cache
-
-/polish/manifest.json
-  Cache-Control: no-cache
-
 /v26/index.html
   Cache-Control: no-cache
 

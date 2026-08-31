@@ -1,0 +1,1 @@
+{"name": "North Route V3", "short_name": "NR V3", "start_url": "./", "scope": "./", "display": "standalone", "background_color": "#F4F1EA", "theme_color": "#161512", "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}]}
