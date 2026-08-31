@@ -654,6 +654,112 @@ body{font-variant-numeric:tabular-nums}
 /* "See all" measured 4.49:1 on bone — one hair under AA. Same darker step
    of the accent the card action uses. */
 .fsec-h .more{color:var(--acc-ink)}
+
+/* ================= TACTILE + ELEGANCE =================
+
+   ONE type scale. The sheet was carrying 23 distinct font sizes; the
+   surfaces a rep actually reads are snapped to five steps. */
+:root{--t1:12px;--t2:14px;--t3:16px;--t4:20px;--t5:26px}
+h1{font-size:var(--t5)}
+.cbar span,.fc-n,.fsec-h b,.sheet h3{font-size:var(--t4)}
+.fc-go,.rowl .lbl,.mini2 .nm,.btn{font-size:var(--t3)}
+.fc-sub,.fc-why,.fc-warn,.fsec-h span,.fsec-h .more,.mini2 .meta,.st,.sub{font-size:var(--t2)}
+.ovl,.count,.ribbon span,.rb-2,h2,.panel>b{font-size:var(--t1)}
+.ribbon b{font-size:var(--t5)}
+.ribbon .rb-2 b{font-size:var(--t3)}
+.ribbon .rb-idle{font-size:var(--t3)}
+
+/* ONE shadow token. e2 and e3 were only ever "the same card, but louder";
+   the sheet separates from the page with its dimmed backdrop instead. */
+:root{--e2:var(--e1);--e3:var(--e1)}
+
+/* the slate blue survived in list status text after the card chips went */
+.st{color:var(--mu)}
+.st.pos,.st .pos{color:var(--pos)}
+.dm{border-color:var(--line2)}
+
+/* ---- condensing bar: fixed, so it can never shift the page under it ---- */
+.cbar{position:fixed;top:0;left:0;right:0;z-index:45;
+ background:var(--carbon);color:var(--bone);
+ padding:calc(9px + var(--safe-t)) 18px 11px;
+ opacity:0;transform:translateY(-100%);pointer-events:none;
+ box-shadow:0 1px 0 rgba(244,241,234,.08);
+ transition:transform 200ms cubic-bezier(.3,0,.1,1),opacity 150ms linear}
+.cbar span{font-weight:750;letter-spacing:-.02em;display:block;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cond .cbar{opacity:1;transform:translateY(0)}
+.hasback .cbar{padding-left:64px}
+
+/* ---- sheets: a real handle, and a scroll that stays inside itself ---- */
+.sheetbg{transition:background 240ms linear,backdrop-filter 240ms linear}
+.sheet{overscroll-behavior:contain;-webkit-overflow-scrolling:touch;will-change:transform}
+.grab{width:44px;height:5px;margin:10px auto 12px;background:var(--sf3);
+ border-radius:99px;cursor:grab}
+.grab:active{cursor:grabbing}
+/* a wider invisible grab target than the 5px bar it draws */
+.sheet .grab::before{content:'';position:absolute;left:0;right:0;height:34px;margin-top:-14px}
+.sheet{position:relative}
+
+/* every scroll container keeps its overscroll to itself */
+.frow,.preset,.res,.chips,.fchips,.frail,body{overscroll-behavior:contain}
+html,body{overscroll-behavior-x:none}
+
+/* ---- the initial skeleton is the only loading state that earns its place.
+   Home renders in 20ms and a filtered list in 6ms; a skeleton for those is
+   a flash of nothing where the answer already was. ---- */
+.wrap .sk,.wrap .skel{display:none}
+#app>.wrap>.skel{display:block}
+
+@media(prefers-reduced-motion:reduce){
+ .cbar{transition:none}
+ .sheetbg{transition:none}
+}
+
+/* ---- two measured contrast failures found in the final sweep ----
+   Areas chips read #BE4A1B on their own tint = 4.05:1, and the management
+   warning "PROCEED WITH CAUTION" read #9A6A00 on bone = 4.24:1. Both under
+   AA. The warning is the one that matters: it is the line telling a rep not
+   to walk into a shop, and it was the hardest text on the screen to read in
+   sun. Darker steps of the same two hues, no new colours. */
+:root{--amb:#7D5400}
+.chip,.chip.on,.preset .chip{color:var(--acc-ink)}
+.mgm b,.mgm>div,.fc-warn{color:var(--amb)}
+.fc-warn.crit{color:var(--neg)}
+
+/* ---- section header: title and count stopped fitting on one line once the
+   heading moved up the type scale, so "One company only" truncated to
+   "One company" and "See all" wrapped mid-word. Give the count its own row
+   instead of squeezing three things into one. ---- */
+.fsec-h{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:1px 12px}
+.fsec-h b{grid-column:1;grid-row:1;min-width:0}
+.fsec-h .more{grid-column:2;grid-row:1;white-space:nowrap;flex:0 0 auto}
+.fsec-h span{grid-column:1/-1;grid-row:2;color:var(--mu2)}
+
+/* ---- chip strips slice at the screen edge, not 18px inside it ----
+   These genuinely scroll (overflow-x:auto, overscroll contained), but a chip
+   cut off with a strip of empty page beside it reads as a rendering fault
+   rather than "there is more this way". Bleed them to the true edge so the
+   cut is obviously deliberate. Higher specificity than the base rule, which
+   a later shorthand margin was overriding. */
+.wrap .preset,.wrap .frow,.wrap .fchips,.wrap .chips{
+ margin-left:-18px;margin-right:-18px;
+ padding-left:18px;padding-right:18px;
+ scroll-padding-left:18px;scroll-padding-right:18px}
+@media(max-width:359px){
+ .wrap .preset,.wrap .frow,.wrap .fchips,.wrap .chips{
+  margin-left:-12px;margin-right:-12px;padding-left:12px;padding-right:12px}
+}
+
+/* Three of these strips carry an inline margin in the generated markup
+   (margin:0 0 4px and friends). An inline style beats any stylesheet rule,
+   which is the one case !important is actually for. Only the horizontal
+   axis is forced, so each strip keeps the vertical rhythm it was given. */
+.wrap .preset,.wrap .frow,.wrap .fchips,.wrap .chips{
+ margin-left:-18px!important;margin-right:-18px!important}
+@media(max-width:359px){
+ .wrap .preset,.wrap .frow,.wrap .fchips,.wrap .chips{
+  margin-left:-12px!important;margin-right:-12px!important}
+}
 .tswr{display:flex;gap:0;margin:0 0 4px;border-bottom:1px solid var(--bd2)}.tsw{flex:1;height:42px;border-radius:0;background:none;color:var(--mu);font-size:13px;font-weight:600;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:.02em;font-family:inherit;cursor:pointer}.tsw.on{color:var(--tx);border-bottom-color:var(--ac);font-weight:700}.tsw:active{opacity:.55}</style>
 </head><body>
 <div id="app"><div class="wrap"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
@@ -1895,7 +2001,7 @@ function vMgmt(){
  <div class="panel"><b>SIGNED RULES · ${rows.length} SHOWN</b>
  ${rows.map(r=>`<div class="mgrow"><span class="mgn">${r.id.slice(2)}</span><div style="flex:1;min-width:0">
    <b>${esc(r.area)}</b>
-   <div class="mgm"><span style="color:${r.d==='DNV'?'#A63D3D':'#9A6A00'};font-weight:800">${r.d==='DNV'?'DO NOT VISIT':'PROCEED WITH CAUTION'}</span> · ${esc(r.conf)} · page ${r.p} · ${MGAPPLIED[r.id]||0} records</div>
+   <div class="mgm"><span style="color:${r.d==='DNV'?'var(--neg)':'var(--amb)'};font-weight:800">${r.d==='DNV'?'DO NOT VISIT':'PROCEED WITH CAUTION'}</span> · ${esc(r.conf)} · page ${r.p} · ${MGAPPLIED[r.id]||0} records</div>
    ${r.note?`<div class="mgm">${esc(r.note)}</div>`:''}</div></div>`).join('')}
  </div>
  <div class="panel"><b>SOURCE DOCUMENT</b>
@@ -2639,6 +2745,116 @@ function v3Card(s,why,tone){
   ${safe}
   ${blocked?'':`<button class="fc-go" onclick="openVisit('${s.id}','feed')" aria-label="Log a visit at ${esc(s.n)}">Log Visit</button>`}
  </div>`}
+
+/* ================= TACTILE =================
+   Hand-written, no libraries. Everything animated here is transform or
+   opacity only, and every animation is switched off under
+   prefers-reduced-motion. */
+(function(){
+ const RM=matchMedia('(prefers-reduced-motion: reduce)');
+
+ /* ---- drag-to-dismiss bottom sheets ----
+    The finger drives the sheet 1:1, the backdrop's dim and blur ramp with
+    how far it has travelled, and letting go either springs it back or
+    carries it out. Dismissal reuses whatever close path the sheet already
+    had - the wizard's Close button (so a draft still saves), otherwise the
+    backdrop tap - rather than ripping the node out and skipping that. */
+ let sheet=null,bg=null,startY=0,dy=0,h=1,dragging=false;
+ const SPRING='transform 280ms cubic-bezier(.22,1,.36,1)';
+
+ function dismiss(b){
+  if(!b)return;
+  const close=[...b.querySelectorAll('button')].find(x=>/^close$/i.test((x.textContent||'').trim()));
+  if(close){close.click();return}
+  b.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}));
+  setTimeout(()=>{if(document.body.contains(b))b.remove()},150);
+ }
+ function paint(p){                       // p: 1 at rest, 0 fully dragged away
+  if(!bg)return;
+  bg.style.background='rgba(22,21,18,'+(0.44*p).toFixed(3)+')';
+  const px=(8*p).toFixed(1)+'px';
+  bg.style.backdropFilter='blur('+px+')';
+  bg.style.webkitBackdropFilter='blur('+px+')';
+ }
+ function reset(){
+  if(bg){bg.style.background='';bg.style.backdropFilter='';bg.style.webkitBackdropFilter='';bg.style.transition=''}
+  if(sheet){sheet.style.transform='';sheet.style.transition=''}
+  sheet=null;bg=null;
+ }
+ function down(e){
+  const s=e.target.closest('.sheet');if(!s)return;
+  if(e.target.closest('button,a,input,textarea,select,[contenteditable]'))return;
+  const onGrab=!!e.target.closest('.grab');
+  if(!onGrab&&s.scrollTop>0)return;       // let the content scroll first
+  const b=s.closest('.sheetbg');if(!b)return;
+  sheet=s;bg=b;h=s.getBoundingClientRect().height||1;
+  startY=(e.touches?e.touches[0]:e).clientY;dy=0;dragging=true;
+  sheet.style.transition='none';bg.style.transition='none';
+ }
+ function move(e){
+  if(!dragging)return;
+  dy=(e.touches?e.touches[0]:e).clientY-startY;
+  if(dy<0)dy=dy/4;                        // resist upward travel
+  if(dy>2&&e.cancelable)e.preventDefault();
+  sheet.style.transform='translate3d(0,'+Math.max(0,dy)+'px,0)';
+  paint(1-Math.min(1,Math.max(0,dy)/h));
+ }
+ function up(){
+  if(!dragging)return;dragging=false;
+  const leave=dy>Math.min(h*0.25,180);
+  if(!RM.matches){
+   sheet.style.transition=SPRING;
+   bg.style.transition='background 240ms linear, backdrop-filter 240ms linear';
+  }
+  if(leave){
+   sheet.style.transform='translate3d(0,'+h+'px,0)';paint(0);
+   const b=bg;setTimeout(()=>{dismiss(b)},RM.matches?0:230);
+   sheet=null;bg=null;
+  }else{
+   sheet.style.transform='';paint(1);
+   const s=sheet,b=bg;setTimeout(()=>{sheet=s;bg=b;reset()},RM.matches?0:300);
+  }
+ }
+ addEventListener('touchstart',down,{passive:true});
+ addEventListener('touchmove',move,{passive:false});
+ addEventListener('touchend',up,{passive:true});
+ addEventListener('touchcancel',up,{passive:true});
+ addEventListener('mousedown',down);addEventListener('mousemove',move);addEventListener('mouseup',up);
+
+ /* ---- condensing header ----
+    The page header keeps scrolling away exactly as it did; a fixed compact
+    bar carrying the same title slides in behind it. Fixed, so it cannot
+    shift the content below it, and it only ever animates transform and
+    opacity. aria-hidden because it duplicates the h1 already in the page. */
+ const cbar=document.createElement('div');
+ cbar.className='cbar';cbar.setAttribute('aria-hidden','true');
+ cbar.innerHTML='<span></span>';
+ document.body.appendChild(cbar);
+ const label=cbar.firstChild;
+ let ticking=false;
+ function sync(){
+  const h1=document.querySelector('header.top h1');
+  const t=h1?h1.textContent.trim():'';
+  if(t&&label.textContent!==t)label.textContent=t;
+  document.documentElement.classList.toggle('cond',(window.scrollY||document.documentElement.scrollTop||0)>52);
+  ticking=false;
+ }
+ addEventListener('scroll',()=>{if(!ticking){ticking=true;requestAnimationFrame(sync)}},{passive:true});
+ new MutationObserver(()=>{if(!ticking){ticking=true;requestAnimationFrame(sync)}})
+  .observe(document.getElementById('app'),{childList:true,subtree:false});
+ sync();
+
+ /* ---- haptics ----
+    Android only. iOS Safari exposes no vibration API whatsoever - there is
+    no polyfill and no way to fake it - so iPhones get the visual press
+    state and nothing more. Stated rather than papered over. */
+ if(/Android/i.test(navigator.userAgent)&&typeof navigator.vibrate==='function'){
+  addEventListener('click',e=>{
+   if(e.target.closest('.tap,.fc-go,.fc-open,.btn,nav.bot a,nav.bot button'))
+    {try{navigator.vibrate(8)}catch(_){}}
+  },{passive:true});
+ }
+})();
  })();
     
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(err=>console.error('[sw] registration failed:',err));
