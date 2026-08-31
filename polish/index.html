@@ -760,6 +760,39 @@ html,body{overscroll-behavior-x:none}
  .wrap .preset,.wrap .frow,.wrap .fchips,.wrap .chips{
   margin-left:-12px!important;margin-right:-12px!important}
 }
+
+/* ================= SAFETY PRESENTATION =================
+   One compact block per restricted row: what, when, where, and what the rep
+   can still do. Left stripe carries the severity so it is unmistakable at a
+   glance without shouting across the whole row. Signed evidence is added
+   only inside the profile. */
+.mgb{display:block;border-radius:10px;padding:7px 10px;margin-top:6px;line-height:1.34;
+ border-left:3px solid currentColor}
+.mgb b{display:block;font-size:13px;font-weight:800;letter-spacing:.01em}
+.mgb span,.mgb em{display:block;font-size:12px;font-style:normal;font-weight:600}
+.mgb em{opacity:.92}
+.mgb .mgev{margin-top:4px;font-size:11.5px;font-weight:500;opacity:.8}
+.mgb.x{background:rgba(166,61,61,.09);color:var(--neg)}
+.mgb.c{background:rgba(125,84,0,.08);color:var(--amb)}
+
+/* one compact status indicator instead of the words repeating down the list */
+.ea{font-size:12.5px;font-weight:650;display:flex;align-items:center;gap:6px;line-height:1.3}
+.ea::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
+
+/* audit-only rows may be quieter, but the name and classification still have
+   to be readable in sun - they were dropped below the AA floor by opacity */
+.m-audit{opacity:1}
+.m-audit .en,.mini2.m-audit .nm{color:var(--tx)}
+.m-audit .em,.mini2.m-audit .meta,.m-audit .st{color:var(--mu)}
+
+/* keep the required wording but tighten the block so it does not dominate
+   the row rhythm - the heading is the one line that has to shout */
+.mgb{padding:6px 9px;margin-top:5px;line-height:1.28}
+.mgb b{font-size:12.5px;letter-spacing:0;line-height:1.22;margin-bottom:1px}
+.mgb span,.mgb em{font-size:11.5px;font-weight:600}
+
+/* "Sort" measured 4.49:1 — one hundredth under AA */
+.fsort,.fpill{color:var(--tx)}
 .tswr{display:flex;gap:0;margin:0 0 4px;border-bottom:1px solid var(--bd2)}.tsw{flex:1;height:42px;border-radius:0;background:none;color:var(--mu);font-size:13px;font-weight:600;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:.02em;font-family:inherit;cursor:pointer}.tsw.on{color:var(--tx);border-bottom-color:var(--ac);font-weight:700}.tsw:active{opacity:.55}</style>
 </head><body>
 <div id="app"><div class="wrap"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
@@ -1053,8 +1086,10 @@ function mini(s){
   else if((s.yol||s.myco)&&mo!=null&&mo>18)na='Win back · last order '+mo+' months ago',nc='var(--rose)';
   else if((s.yol||s.myco)&&mo!=null&&mo>=6)na='Reactivate · last order '+mo+' months ago',nc='var(--rose)';
   else if(/^ACCOUNT EXISTS/.test(s.ps))na='Open the first order',nc='var(--teal)';
-  else if(s.yol&&!s.myco)na='Introduce MYCO'+(mo!=null?' · ordered '+mo+'mo ago':''),nc='var(--teal)';
-  else if(s.myco&&!s.yol)na='Introduce YOL'+(mo!=null?' · ordered '+mo+'mo ago':''),nc='var(--teal)';
+  else if(s.yol&&!s.myco)na='Introduce MYCO'+(mo==null?'':mo===0?' · ordered this month':' · ordered '+mo+'mo ago'),nc='var(--teal)';
+  else if(s.myco&&!s.yol)na='Introduce YOL'+(mo==null?'':mo===0?' · ordered this month':' · ordered '+mo+'mo ago'),nc='var(--teal)';
+  else if(mo===0)na='Ordered this month',nc='var(--mu)';
+  else if(mo===1)na='Ordered last month',nc='var(--mu)';
   else if(mo!=null)na='Last order '+mo+' months ago',nc='var(--mu)'}
  let acts='';
  if(kind==='route')
@@ -2176,20 +2211,24 @@ function mini(s){
   else if((s.yol||s.myco)&&mo!=null&&mo>18)na='Win back · last order '+mo+' months ago',nc='var(--neg)';
   else if((s.yol||s.myco)&&mo!=null&&mo>=6)na='Reactivate · last order '+mo+' months ago',nc='var(--neg)';
   else if(/^ACCOUNT EXISTS/.test(s.ps))na='Open the first order',nc='var(--slate)';
-  else if(s.yol&&!s.myco)na='Introduce MYCO'+(mo!=null?' · ordered '+mo+'mo ago':''),nc='var(--slate)';
-  else if(s.myco&&!s.yol)na='Introduce YOL'+(mo!=null?' · ordered '+mo+'mo ago':''),nc='var(--slate)';
+  else if(s.yol&&!s.myco)na='Introduce MYCO'+(mo==null?'':mo===0?' · ordered this month':' · ordered '+mo+'mo ago'),nc='var(--slate)';
+  else if(s.myco&&!s.yol)na='Introduce YOL'+(mo==null?'':mo===0?' · ordered this month':' · ordered '+mo+'mo ago'),nc='var(--slate)';
+  else if(mo===0)na='Ordered this month',nc='var(--mu)';
+  else if(mo===1)na='Ordered last month',nc='var(--mu)';
   else if(mo!=null)na='Last order '+mo+' months ago',nc='var(--mu)'}
- if(mgOf(s)&&mgOf(s).d==='X'){na='Do not route — management restricted';nc='var(--neg)'}
+ const _mg=mgOf(s);
+ if(_mg&&_mg.d==='X'){na='Management restricted — do not visit';nc='var(--neg)'}
+ else if(_mg){na='Proceed with caution';nc='var(--amb)'}
  const inRoute=RT&&RT.stops&&RT.stops.includes(s.id);
  return `<div class="card mini e2 ${cls}" onclick="openSheet('${s.id}')">
   <div class="rail">${duo(s)}</div>
   <div class="ebody">
    <div class="en">${esc(s.n)}</div>
-   <div class="em">${TERR==='all'?`<b>${((s._terr||'')[0]||'').toUpperCase()+(s._terr||'').slice(1)}</b> · `:''}${s.cat?esc(s.cat)+' · ':''}${esc(s.town||'Area unrecorded')}${st?' · '+st:''}</div>
-   ${na?`<div class="ea" style="color:${nc}">${na}</div>`:''}
+   <div class="em">${TERR==='all'?`<b>${((s._terr||'')[0]||'').toUpperCase()+(s._terr||'').slice(1)}</b> · `:''}${s.cat?esc(s.cat)+' · ':''}${esc(s.town||'Area unrecorded')}${mgOf(s)?'':(st&&!/^ready to visit$/i.test(st)?' · '+st:'')}</div>
+   ${na&&!mgOf(s)?`<div class="ea" style="color:${nc}">${na}</div>`:''}
    ${mgOf(s)?mgBadge(s,0):''}
   </div>
-  <div class="ex">${mgOf(s)&&mgOf(s).d==='X'?'<i style="color:#A63D3D">■</i>':(mgOf(s)?'<i style="color:#9A6A00">▲</i>':'')}${follows[s.id]?'<i class="fx">⚑</i>':''}${inRoute?'<i class="rx">◈</i>':''}<i class="cx">›</i></div>
+  <div class="ex">${mgOf(s)&&mgOf(s).d==='X'?'<i style="color:var(--neg)">■</i>':(mgOf(s)?'<i style="color:var(--amb)">▲</i>':'')}${follows[s.id]?'<i class="fx">⚑</i>':''}${inRoute?'<i class="rx">◈</i>':''}<i class="cx">›</i></div>
  </div>`}
 function listBody(base){
  const L=applyAll(base);
@@ -2854,6 +2893,55 @@ function v3Card(s,why,tone){
     {try{navigator.vibrate(8)}catch(_){}}
   },{passive:true});
  }
+})();
+
+/* ================= SAFETY, SCORES AND SAFE AREA =================
+   These are function declarations in the same scope as the originals, so
+   the last one wins - including for code that already calls them. */
+
+/* A management restriction is a safety rule, not a calendar event.
+   mgBlocked() was gated on mgLive() (today >= 1 Sep 2026), so until that
+   date routable() still returned true and the app offered Directions to
+   all 239 restricted shops that carry coordinates. The effective date
+   belongs in the message, never in whether the rule applies. Dropping the
+   gate makes routable() exclude every restricted shop immediately. */
+function mgBlocked(s){const m=mgOf(s);return !!(m&&m.d==='X')}
+
+/* The rank slot sat where the YOL/MYCO dots sit on a customer row, so a
+   prospect's raw 0-97 score read as a customer count. Nothing in the app
+   explains what the number measures, so it is not shown. The value stays
+   on the record - this removes a display, not data. */
+function duo(s){
+ if(!s.yol&&!s.myco)return '';
+ return `<span class="duo"><i class="dy ${s.yol?'f':''}"></i><i class="dm ${s.myco?'f':''}"></i></span>`}
+
+/* One compact block, four facts, correct hierarchy. The old string ran the
+   date straight into the area with no separator - "from 1 Sep 2026Nelson
+   Street, Port of Spain". Signed evidence appears only in the profile
+   (big=1), never expanded across a directory row. */
+function mgBadge(s,big){
+ const m=mgOf(s); if(!m)return '';
+ const ev=big?`<span class="mgev">Signed ruling ${esc(m.r)} · page ${m.p} · ${esc(m.c)}</span>`:'';
+ if(m.d==='X')return `<div class="mgb x"><b>MANAGEMENT RESTRICTED — DO NOT VISIT</b>`
+  +`<span>Effective 1 September 2026</span>`
+  +`<span>${esc(m.a)}</span>`
+  +`<em>Call and WhatsApp service continues</em>${ev}</div>`;
+ return `<div class="mgb c"><b>Proceed with caution</b><span>${esc(m.a)}</span>${ev}</div>`}
+
+/* The bottom bar's height is set by its own content, so deriving the page's
+   bottom padding from a hard-coded token drifts. Measure the bar and give
+   the page that height plus the safe-area inset plus a thumb of breathing
+   room, so the last record always clears the navigation. */
+(function(){
+ function pad(){
+  const bar=document.querySelector('nav.bot');
+  if(!bar)return;
+  const h=Math.ceil(bar.getBoundingClientRect().height);
+  if(h>0)document.documentElement.style.setProperty('--navh',h+'px');
+ }
+ addEventListener('load',pad); addEventListener('resize',pad);
+ addEventListener('orientationchange',()=>setTimeout(pad,250));
+ setTimeout(pad,400); setTimeout(pad,1500);
 })();
  })();
     
