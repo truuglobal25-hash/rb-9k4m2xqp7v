@@ -575,6 +575,85 @@ h2{font-size:11.5px}
  /* resume capsule re-seated against the new bar height */
  .rsx{bottom:calc(var(--navh) + var(--safe-b) + 12px)}
 }
+
+/* ================= VISUAL PASS — reduction only =================
+   One accent (orange). One containment rule: all CONTENT sits in the same
+   card surface; the only non-card surfaces are chrome (top bar, tab bar).
+   One shadow token. Radius tied to element size. Borders removed wherever
+   spacing already separates things. */
+
+/* every number lines up, everywhere */
+body{font-variant-numeric:tabular-nums}
+
+/* ---- ONE accent. The slate-blue link tone is gone; orange is the only
+   non-neutral, and semantic warning colours stay separate from it. ---- */
+.fc-why{color:var(--mu);font-weight:650;font-size:13.5px;line-height:1.4}
+.fc-warn{font-size:13px;font-weight:700;line-height:1.4;color:var(--amb);margin-top:2px}
+.fc-warn.crit{color:var(--neg)}
+
+/* ---- card: the name gets the width the avatar used to take ---- */
+.fcard{display:flex;flex-direction:column;gap:6px;padding:var(--sp4);
+ background:var(--paper);border-radius:var(--r-card);box-shadow:var(--e1);
+ border:1px solid rgba(27,26,23,.07);margin:0 0 var(--sp3);cursor:pointer}
+.fcard:last-child{margin-bottom:0}
+.fc-n{font-size:19px;font-weight:750;line-height:1.22;letter-spacing:-.024em;text-wrap:pretty}
+.fc-sub{font-size:13.5px;color:var(--mu2);margin-top:-1px}
+.fc-go{margin-top:10px;width:100%;min-height:50px;font-size:15px;font-weight:750;
+ border:0;border-radius:14px;background:var(--acc);color:#fff;cursor:pointer}
+
+/* ---- stats block: same surface as the list cards (one containment rule),
+   today's numbers lead, "new this week" steps down ---- */
+.ribbon{background:var(--paper);border:1px solid rgba(27,26,23,.07);
+ border-radius:var(--r-card);box-shadow:var(--e1);
+ padding:var(--sp4);margin:var(--sp4) 0 var(--sp3);gap:6px 20px}
+.ribbon b{font-size:24px;line-height:1.05;margin-right:5px}
+.ribbon span{font-size:12.5px;color:var(--mu2)}
+.ribbon .rb-2 b{font-size:15px;font-weight:750;color:var(--mu)}
+.ribbon .rb-2{font-size:12px}
+.ribbon .rb-idle{font-size:15px;font-weight:700;color:var(--tx);white-space:normal}
+.ribbon .hot b{color:var(--acc)}
+
+/* ---- touch: real feedback, and nothing swallowing it ---- */
+.tap,.fcard,.btn,button,a[href]{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.fcard,.fc-go,.btn,.tap{transition:transform 120ms cubic-bezier(.3,0,.1,1)}
+.fcard:active,.fc-go:active,.btn:active,.tap:active{transform:scale(.97)}
+/* pressing the inline button must not also depress the card behind it */
+.fcard:has(.fc-go:active){transform:none}
+.fcard:focus-visible,.fc-go:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+@media(prefers-reduced-motion:reduce){
+ .fcard,.fc-go,.btn,.tap{transition:none}
+ .fcard:active,.fc-go:active,.btn:active,.tap:active{transform:none}
+}
+
+/* ---- the accent, spent in one place ----
+   25 solid orange blocks down a scrolling list drowned out the one page-level
+   CTA, and white-on-orange measured 3.38:1 — below AA for 15px bold text.
+   The card action becomes a tint carrying a darker step of the SAME hue
+   (a ramp, not a second colour), which reads as primary inside its own card
+   while leaving "Start today's route" the only solid orange on the screen. */
+:root{--acc-ink:#A83C12}
+.fc-go{background:rgba(232,98,44,.12);color:var(--acc-ink);font-weight:750;min-height:48px}
+.fc-go:active{background:rgba(232,98,44,.20)}
+
+/* stats card: one line of content should not sit in a 44px-tall line box */
+.ribbon span{line-height:1.25}
+.ribbon{padding:14px var(--sp4)}
+
+/* ---- card hit area without nesting one button inside another ----
+   The name is the control; its ::after stretches over the whole card so a
+   tap anywhere opens the sheet. Log Visit rides above that overlay. */
+.fcard{position:relative}
+.fc-open{display:block;width:100%;text-align:left;background:none;border:0;padding:0;
+ font:inherit;color:inherit;cursor:pointer}
+.fc-open::after{content:'';position:absolute;inset:0;border-radius:inherit;z-index:0}
+.fc-go{position:relative;z-index:1}
+.fcard:has(.fc-open:focus-visible){outline:2px solid var(--acc);outline-offset:2px}
+.fcard:has(.fc-open:active){transform:scale(.97)}
+
+/* "See all" measured 4.49:1 on bone — one hair under AA. Same darker step
+   of the accent the card action uses. */
+.fsec-h .more{color:var(--acc-ink)}
 .tswr{display:flex;gap:0;margin:0 0 4px;border-bottom:1px solid var(--bd2)}.tsw{flex:1;height:42px;border-radius:0;background:none;color:var(--mu);font-size:13px;font-weight:600;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:.02em;font-family:inherit;cursor:pointer}.tsw.on{color:var(--tx);border-bottom-color:var(--ac);font-weight:700}.tsw:active{opacity:.55}</style>
 </head><body>
 <div id="app"><div class="wrap"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
@@ -2303,10 +2382,11 @@ function vToday(){
  </header><div class="wrap" id="feed">
  ${res}
  ${Q?'':`<div class="ribbon">
+  ${(doneToday===0&&remStops===0&&fuDue===0)?`<span class="rb-idle">Route not started</span>`:`
   <span class="tap" onclick="go('fieldwork')"><b>${doneToday}</b>visited today</span>
   <span class="tap" onclick="go('route')"><b>${remStops}</b>stops left</span>
-  <span class="tap ${fuDue?'hot':''}" onclick="go('follow')"><b>${fuDue}</b>follow-ups</span>
-  <span class="tap" onclick="go('list:newdisc')"><b>${newWeek}</b>new this week</span>
+  <span class="tap ${fuDue?'hot':''}" onclick="go('follow')"><b>${fuDue}</b>follow-ups</span>`}
+  <span class="tap rb-2" onclick="go('list:newdisc')"><b>${newWeek}</b>new this week</span>
  </div>`}
  ${!Q&&!rtActive()&&TERR!=='all'?`<div class="row" style="margin:14px 0 2px"><button class="btn gold tap" onclick="rtStart()">Start today's route</button></div>`:''}
  ${secs.map(sec=>`<section class="fsec" aria-label="${esc(sec.t)}">
@@ -2536,34 +2616,29 @@ function v3Totals(){
   ${split?`<div class="rowl"><span class="lbl" style="font-variant-numeric:tabular-nums">Customer businesses: ${split}</span><b style="color:var(--pos)">exact</b></div>`:''}
   <div class="rowl"><span class="lbl" style="opacity:.75">${T.toLocaleString()} stored records resolve to ${ab.toLocaleString()} distinct name-and-area businesses; the ${C.toLocaleString()} customer records resolve to ${cb.toLocaleString()}. Same-shop rows were kept apart on purpose — none were merged, none were deleted.${TERR==='all'?' Three customer businesses are currently filed in both North and South (all in Oropouche) and are counted in each; they need a territory ruling.':''}</span></div>
  </div>`}
-/* ---- card: the 2-second read ----
-   Priority order per the brief: name > territory and area > relationship
-   > the one opportunity or warning > one primary action. The only markup
-   change is showing the territory in All mode, where the card previously
-   gave no clue which route a shop belonged to. Everything else is CSS. */
+/* ---- customer card ----
+   Was: avatar tile + YOL/MYCO chips + the same fact restated as a sentence
+   + three competing buttons. Now the name takes the width, the sentence
+   carries the relationship alone, and Log Visit is the only inline action.
+
+   "Whole card tappable" plus "one action per card" naively produces a
+   <button> inside a role="button" - invalid, and a screen reader reads the
+   card out as one control named "Daniel's Grocery ... Log Visit". Instead
+   the NAME is the button and a stretched ::after overlay makes the whole
+   card its hit area, while Log Visit sits above that overlay. Two clean,
+   separately-labelled controls; still one tap anywhere to open the sheet,
+   which already holds Directions, Call and More. */
 function v3Card(s,why,tone){
  const m=mgOf(s), blocked=m&&m.d==='X';
- const dr=routable(s)&&(s.g||s.la!=null)&&!blocked;
- const href=dr?(s.g||('https://www.google.com/maps/dir/?api=1&destination='+s.la+','+s.ln)):'';
  const terr=(TERR==='all'&&s._terr)?esc(s._terr[0].toUpperCase()+s._terr.slice(1))+' · ':'';
- const safe=m?`<div class="fc-why" style="color:${blocked?'var(--neg)':'var(--amb)'}">${blocked?'Do not visit — management restricted':'Proceed with caution — management guidance'}</div>`:'';
+ const safe=m?`<div class="fc-warn${blocked?' crit':''}">${blocked?'Do not visit — management restricted':'Proceed with caution — management guidance'}</div>`:'';
  return `<div class="fcard">
-  <div class="fc-hit tap lift" role="button" tabindex="0" aria-label="Open ${esc(s.n)}"
-       onclick="openSheet('${s.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openSheet('${s.id}')}">
-   <div class="fc-top">${v3Mark(s)}<div style="flex:1;min-width:0">
-    <div class="fc-n">${esc(s.n)}</div>
-    <div class="fc-sub">${terr}${esc(s.town||'Area unrecorded')}${s.cat?' · '+esc(s.cat):''}</div>
-    <div class="fc-rel"><i class="${s.yol?'on':''}">YOL</i><i class="dm ${s.myco?'on':''}">MYCO</i></div>
-   </div></div>
-   <div class="fc-why" style="color:${tone||'var(--mu)'}">${esc(why)}</div>
-   ${safe}
-  </div>
-  <div class="fc-acts">
-   ${dr?`<a class="pri tap" href="${href}" target="_blank" rel="noopener" aria-label="Directions to ${esc(s.n)}">Directions</a>`
-      :(blocked?`<span class="blocked">No routing</span>`:'')}
-   <button class="tap" onclick="openVisit('${s.id}','feed')" aria-label="Log a visit at ${esc(s.n)}">Log Visit</button>
-   ${s.p?`<a class="ico tap" href="tel:${tel(s.p)}" aria-label="Call ${esc(s.n)}">&#9742;</a>`:''}
-  </div></div>`}
+  <button class="fc-open" onclick="openSheet('${s.id}')" aria-label="Open ${esc(s.n)}"><span class="fc-n">${esc(s.n)}</span></button>
+  <div class="fc-sub">${terr}${esc(s.town||'Area unrecorded')}${s.cat?' · '+esc(s.cat):''}</div>
+  <div class="fc-why">${esc(why)}</div>
+  ${safe}
+  ${blocked?'':`<button class="fc-go" onclick="openVisit('${s.id}','feed')" aria-label="Log a visit at ${esc(s.n)}">Log Visit</button>`}
+ </div>`}
  })();
     
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(err=>console.error('[sw] registration failed:',err));
