@@ -62,8 +62,11 @@ In `/studio/` the gate is removed and precedence is enforced:
 Routing language is suppressed on ANY managed record. Restricted shops get no
 Directions and no inline action. Verified 0 contradictions across 1,650 rendered rows.
 
-**`/app/` production still has the original date-gated bug.** Worth fixing there
-regardless of which candidate wins.
+**FIXED in `/app/` on 31 Aug 2026** (owner-instructed): the gate was removed from
+mgBlocked with a one-string patch, root-fixed in build_v2.py so every /app/
+builder inherits it, sw cache bumped to v2-e4417408c3. Verified live: 0 of 20
+sampled restricted shops offer Directions (was 3 of 20 pre-patch). Backup at
+app/index.html.bak-dategate-20260831.
 
 ## Testing gaps that bit me — do not repeat
 
