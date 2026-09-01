@@ -1304,6 +1304,31 @@ nav.bot{background:var(--spine);border-radius:0;
  .ent-go,header.top .tsw button{transition:none}
  .ent-go:active{transform:none}
 }
+
+/* ==========================================================================
+   SPEED
+
+   Baseline measured on the 22,278-record list: 12 scroll frames cost 177.8ms,
+   about 14.8ms each. That is inside the 16.7ms budget but with almost nothing
+   to spare, so any slower phone drops frames.
+
+   content-visibility:auto lets the browser skip layout, style and paint for
+   rows that are off-screen entirely. contain-intrinsic-size gives it the row
+   height up front so the scrollbar does not jump as rows enter and leave.
+   Both are native CSS - no library, no JS, no change to markup or data.
+   ========================================================================== */
+.card.mini,.ent{
+ content-visibility:auto;
+ contain-intrinsic-size:auto 86px;
+ contain:layout style paint}
+
+/* panels and sections are tall and independent; isolate their layout so a
+   change inside one cannot force the whole page to re-lay-out */
+.panel,.fsec{contain:layout style}
+
+/* the header repaints on every scroll tick for the condensing bar; keep it
+   on its own layer so that repaint never touches the list underneath */
+nav.bot,.cbar{contain:layout style paint}
 .tswr{display:flex;gap:0;margin:0 0 4px;border-bottom:1px solid var(--bd2)}.tsw{flex:1;height:42px;border-radius:0;background:none;color:var(--mu);font-size:13px;font-weight:600;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:.02em;font-family:inherit;cursor:pointer}.tsw.on{color:var(--tx);border-bottom-color:var(--ac);font-weight:700}.tsw:active{opacity:.55}</style>
 </head><body>
 <div id="app"><div class="wrap"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
