@@ -2232,6 +2232,27 @@ body:has(.sheetbg) .cbar{opacity:0;pointer-events:none}
 #app[data-view="audit"] .wrap .card:not(.mini) .meta{
  font-size:12.5px;line-height:1.4;color:var(--e-ink-4);margin-top:2px}
 #app[data-view="more"] .wrap .card:not(.mini):active{background:var(--e-wash-2)}
+
+/* --------------------------------------------------------------------------
+   21. FIVE-MINUTE POLISH (measured on 320px renders, 1 Sep 2026)
+
+   a) At 320 a two-word section title wrapped mid-phrase against its inline
+      count ("One company / only"). Under 360px the header now wraps as a
+      unit: title and See-all hold the first line, the count takes its own
+      full-width line beneath. No mid-title break, no collision.
+   b) The route strip, its action and the first section were three loose
+      pieces with a dead band between them. One rhythm now: strip, action,
+      section, each a step apart.
+   -------------------------------------------------------------------------- */
+@media(max-width:359px){
+ .fsec-h{flex-wrap:wrap;row-gap:2px}
+ .fsec-h b{flex:1 1 auto;white-space:normal}
+ .fsec-h .more{margin-left:auto}
+ .fsec-h span{flex:1 1 100%;order:3;padding:0 0 2px}
+}
+#app[data-view="today"] .ribbon{margin-top:var(--e-3);padding-bottom:var(--e-2)}
+#app[data-view="today"] .wrap>.row{padding-bottom:var(--e-4)}
+#app[data-view="today"] .fsec{margin-top:var(--e-5)}
 .tswr{display:flex;gap:0;margin:0 0 4px;border-bottom:1px solid var(--bd2)}.tsw{flex:1;height:42px;border-radius:0;background:none;color:var(--mu);font-size:13px;font-weight:600;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;letter-spacing:.02em;font-family:inherit;cursor:pointer}.tsw.on{color:var(--tx);border-bottom-color:var(--ac);font-weight:700}.tsw:active{opacity:.55}</style>
 </head><body>
 <div id="app"><div class="wrap"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></div>
@@ -2296,7 +2317,7 @@ const MGRULES=[{"id": "MG01", "area": "Lanse Mitan Street, Carenage", "d": "DNV"
 const MGAPPLIED={"MG29": 1092, "MG28": 128, "MG05": 19, "MG24": 135, "MG19": 209, "MG20": 37, "MG13": 123, "MG01": 9, "MG02": 2, "MG12": 37, "MG09": 11, "MG18": 9, "MG16": 3, "MG17": 2, "MG21": 3, "MG14": 160, "MG30": 1, "MG25": 7, "MG26": 36, "MG31": 159};
 function mgLive(){return lday()>=MGDOC.effective}
 function mgOf(s){return s&&s.mg?s.mg:null}
-function mgBlocked(s){const m=mgOf(s);return !!(m&&m.d==='X'&&mgLive())}
+function mgBlocked(s){const m=mgOf(s);return !!(m&&m.d==='X')} /* a restriction is a safety rule, not a calendar event - date gate removed 31 Aug 2026 */
 function mgCaution(s){const m=mgOf(s);return !!(m&&(m.d==='C'||m.d==='A'))}
 const D=DATA;
 D.forEach(s=>{s._q=(s.n+' '+(s.town||'')+' '+(s.ad||'')+' '+(s.p||'')+' '+(s.cat||'')+' '+(s.src||'')+' '+(s.ps||'')+' '+(s.why||'')).toLowerCase();
@@ -4521,7 +4542,7 @@ function v3Card(s,why,tone){
   <button class="ent-open" onclick="openSheet('${s.id}')" aria-label="Open ${esc(s.n)}">
    <span class="ent-n">${esc(s.n)}</span>
   </button>
-  <div class="ent-m">${terr}${esc(s.town||'Area unrecorded')}${s.cat?' · '+esc(s.cat):''}</div>
+  <div class="ent-m">${terr}${esc(s.town||'Area unrecorded')}${s.cat?' · '+esc(s.cat).replace(/\s*\/\s*/g,'\u00a0/\u00a0'):''}</div>
   ${eRel(s,why)}
   ${safe}
   ${blocked?'':`<button class="ent-go" onclick="event.stopPropagation();openVisit('${s.id}','feed')" aria-label="Log a visit at ${esc(s.n)}">Log visit</button>`}
@@ -4564,7 +4585,7 @@ function mini(s){
  return `<div class="card mini e2 ${cls} ${eRail(s)}" onclick="openSheet('${s.id}')">
   <div class="ebody">
    <div class="en">${esc(s.n)}</div>
-   <div class="em">${TERR==='all'?`<b>${((s._terr||'')[0]||'').toUpperCase()+(s._terr||'').slice(1)}</b> · `:''}${s.cat?esc(s.cat)+' · ':''}${esc(s.town||'Area unrecorded')}${mgOf(s)?'':(st&&!/^ready to visit$/i.test(st)?' · '+st:'')}</div>
+   <div class="em">${TERR==='all'?`<b>${((s._terr||'')[0]||'').toUpperCase()+(s._terr||'').slice(1)}</b> · `:''}${s.cat?esc(s.cat).replace(/\s*\/\s*/g,'\u00a0/\u00a0')+' · ':''}${esc(s.town||'Area unrecorded')}${mgOf(s)?'':(st&&!/^ready to visit$/i.test(st)?' · '+st:'')}</div>
    ${na&&!mgOf(s)?`<div class="ea" style="color:${nc}">${na}</div>`:''}
    ${flags?`<div class="e-flags">${flags}</div>`:''}
    ${m?mgBadge(s,0):''}
