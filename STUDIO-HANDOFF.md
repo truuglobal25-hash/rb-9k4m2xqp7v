@@ -120,3 +120,53 @@ open. Do not add libraries for visual effects.
 Same functions. No new options, buttons, filters, navigation, categories, dashboards
 or pop-ups. Production stays untouched until he approves a rendered candidate on his
 own phone. Records deleted: zero. Lightspeed writes: zero.
+
+---
+
+# ELITE addendum (31 Aug 2026, second session)
+
+`/elite/` is the skill-led redesign candidate this handoff asked for. Build
+`el-03bbd56ef8`, live at https://north-route.pages.dev/elite/ . `/studio/`
+(`st-fbb0e497cf`) and `/app/` production are untouched.
+
+Build with `python build_elite.py` from `~/wowish jpeg/` (a 5-line delta of
+build_studio.py). CSS chain gains `design_elite.css` LAST; JS chain gains
+`design_elite_overrides.js` LAST. Both traps from the top of this file still
+apply, and both were hit again this session:
+
+- A `#sheet` selector block was inert for a whole build: the sheet is
+  `div.sheet` inside `div#sheetbg` - there is no `#sheet`. Measure the DOM
+  before styling it.
+- `.card.mini` is used by BOTH directory shop rows and area rows with
+  different children. Styling the bare class broke Areas; the shop row is
+  `.card.mini.e2`, scope there.
+- `#backbtn` is fixed at z=70; sheets paint at z=60, so the button floated
+  over the Log Visit sheet. Now hidden via body:has(.sheetbg).
+- `position:fixed` elements report `offsetParent===null` even when visible -
+  do not use offsetParent as a visibility probe for the back button.
+- The `.wrap`-scoped search restyle: the Home search lives in the dark spine;
+  an unscoped `.homesearch` rule painted cream inside the black header at
+  320px. Screenshots caught it; DOM assertions did not (again).
+
+What elite changes (all render-layer; data, logic, safety untouched):
+- Every list row carries a 3px left state rail (green customer / orange
+  verified / amber caution / red restricted / grey audit), always with words
+  beside it - never colour alone.
+- The `|| YOL` two-bar meter is gone; relationships are sentences
+  ("Buys from YOL.  Introduce MYCO.") via eRel() in the elite overrides.
+- One selection mechanic app-wide (weight + 2px accent rule): territory row,
+  profile tabs, bottom nav. The stock segmented pill is gone everywhere.
+- Em/en dashes are normalised to sentences at the source (eText) plus a
+  guarded DOM pass (0.1-0.2ms; the unguarded TreeWalker cost 1.1ms/render).
+- mgBlocked/routable NOT overridden - safety precedence inherited intact.
+  Verified: blocked profile shows no Directions, same buttons as /studio/.
+- Legacy colour tokens (--mu etc.) re-pointed at AA-computed values;
+  --mu2 3.97:1 was a real AA failure carrying counts at 12.5px.
+
+Verified this session: 88 screen-width audits clean (overflow, type floor,
+44px targets, under-nav, dashes, pipes, merged nodes, contrast, unnamed
+controls all zero) · totals test ALL INVARIANTS PASS · blob SHAs unchanged ·
+perf within noise of /studio/ over 3 runs per build (medians: home 31.7 vs
+32.6, full list 23.3 vs 21.6, profile open 12.0 vs 8.9, scroll p95 17.2 vs
+17.6 - all inside the run-to-run spread) · offline works, 11,797 records,
+0 requests warm · live smoke on pages.dev clean.
