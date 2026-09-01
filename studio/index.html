@@ -1030,9 +1030,18 @@ header.top{padding-left:var(--gutter);padding-right:var(--gutter)}
    moved onto the shared rail it collided with that button, so the button now
    gets its own row: the eyebrow line is given the button's height and the
    offset, and the title starts below it. One rail preserved, no overlap. */
-#backbtn{left:var(--gutter);top:calc(6px + var(--safe-t));width:40px;height:40px}
+/* The back button was 40x40, under the 44px floor every other control meets,
+   and it shares the top-left corner with the eyebrow row. Give it the full
+   touch target, a solid ground so it always reads as a control, and a
+   stacking order nothing in the header can climb above. */
+#backbtn{left:var(--gutter);top:calc(6px + var(--safe-t));
+ width:44px;height:44px;z-index:70;
+ background:rgba(242,239,232,.14);border:1px solid rgba(242,239,232,.20);
+ border-radius:13px;color:#F2EFE8;font-size:19px;line-height:1;
+ display:flex;align-items:center;justify-content:center}
+#backbtn:active{background:rgba(242,239,232,.26);transform:scale(.94)}
 .hasback header.top{padding-top:calc(6px + var(--safe-t))}
-.hasback header.top .ovl{padding-left:var(--backrail);min-height:40px;
+.hasback header.top .ovl{padding-left:calc(var(--backrail) + 8px);min-height:44px;
  display:flex;align-items:center}
 
 /* no negative margins: these were the 0px and 46px rails */

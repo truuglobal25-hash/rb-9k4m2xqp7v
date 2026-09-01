@@ -19,6 +19,24 @@
 /polish/manifest.json
   Cache-Control: no-cache
 
+/studio/sw.js
+  Cache-Control: no-cache
+
+/studio/index.html
+  Cache-Control: no-cache
+
+/studio/manifest.json
+  Cache-Control: no-cache
+
+/premium/sw.js
+  Cache-Control: no-cache
+
+/premium/index.html
+  Cache-Control: no-cache
+
+/premium/manifest.json
+  Cache-Control: no-cache
+
 /v26/index.html
   Cache-Control: no-cache
 
