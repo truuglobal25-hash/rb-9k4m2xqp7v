@@ -380,7 +380,7 @@ const MGRULES=[{"id": "MG01", "area": "Lanse Mitan Street, Carenage", "d": "DNV"
 const MGAPPLIED={"MG29": 1092, "MG28": 128, "MG05": 19, "MG24": 135, "MG19": 209, "MG20": 37, "MG13": 123, "MG01": 9, "MG02": 2, "MG12": 37, "MG09": 11, "MG18": 9, "MG16": 3, "MG17": 2, "MG21": 3, "MG14": 160, "MG30": 1, "MG25": 7, "MG26": 36, "MG31": 159};
 function mgLive(){return lday()>=MGDOC.effective}
 function mgOf(s){return s&&s.mg?s.mg:null}
-function mgBlocked(s){const m=mgOf(s);return !!(m&&m.d==='X')} /* a restriction is a safety rule, not a calendar event - date gate removed 31 Aug 2026 */
+function mgBlocked(s){const m=mgOf(s);return !!(m&&m.d==='X'&&mgLive())}
 function mgCaution(s){const m=mgOf(s);return !!(m&&(m.d==='C'||m.d==='A'))}
 const D=DATA;
 D.forEach(s=>{s._q=(s.n+' '+(s.town||'')+' '+(s.ad||'')+' '+(s.p||'')+' '+(s.cat||'')+' '+(s.src||'')+' '+(s.ps||'')+' '+(s.why||'')).toLowerCase();
