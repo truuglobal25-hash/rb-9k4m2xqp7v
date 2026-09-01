@@ -1034,15 +1034,29 @@ header.top{padding-left:var(--gutter);padding-right:var(--gutter)}
    and it shares the top-left corner with the eyebrow row. Give it the full
    touch target, a solid ground so it always reads as a control, and a
    stacking order nothing in the header can climb above. */
+/* Two real defects here, both measured on the live build.
+
+   1. The eyebrow (.ovl) box started at x=18 - the same pixel as the back
+      button - and ran the full 354px header width. Padding moved its TEXT
+      clear but not its box, so .ovl stayed a click target underneath and
+      around the button. .ovl is the territory-switcher trigger, so a tap
+      that missed the arrow by a few pixels opened the territory sheet
+      instead of going back. That is what made going back a task. Margin,
+      not padding: the box now begins after the button and cannot be hit.
+
+   2. The button was 14% opaque, so whatever sat behind it showed through
+      and read as a coloured tile with the chevron on top. It is opaque now
+      and nothing can ever bleed through it. */
 #backbtn{left:var(--gutter);top:calc(6px + var(--safe-t));
  width:44px;height:44px;z-index:70;
- background:rgba(242,239,232,.14);border:1px solid rgba(242,239,232,.20);
+ background:#2B2822;border:1px solid rgba(242,239,232,.18);
  border-radius:13px;color:#F2EFE8;font-size:19px;line-height:1;
  display:flex;align-items:center;justify-content:center}
-#backbtn:active{background:rgba(242,239,232,.26);transform:scale(.94)}
+#backbtn:active{background:#3A362E;transform:scale(.94)}
 .hasback header.top{padding-top:calc(6px + var(--safe-t))}
-.hasback header.top .ovl{padding-left:calc(var(--backrail) + 8px);min-height:44px;
- display:flex;align-items:center}
+.hasback header.top .ovl{
+ margin-left:calc(var(--backrail) + 10px);padding-left:0;
+ min-height:44px;display:flex;align-items:center}
 
 /* no negative margins: these were the 0px and 46px rails */
 header.top .tsw3,header.top .tsw,header.top .seg{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
