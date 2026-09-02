@@ -383,7 +383,7 @@ function mgOf(s){return s&&s.mg?s.mg:null}
 function mgBlocked(s){const m=mgOf(s);return !!(m&&m.d==='X')} /* a restriction is a safety rule, not a calendar event - date gate removed 31 Aug 2026 */
 function mgCaution(s){const m=mgOf(s);return !!(m&&(m.d==='C'||m.d==='A'))}
 const D=DATA;
-D.forEach(s=>{s._q=(s.n+' '+(s.town||'')+' '+(s.ad||'')+' '+(s.p||'')+' '+(s.cat||'')+' '+(s.src||'')+' '+(s.ps||'')+' '+(s.why||'')).toLowerCase();
+D.forEach(s=>{s._q=(s.n+' '+(s.aka||[]).join(' ')+' '+(s.xs||'')+' '+(s.town||'')+' '+(s.ad||'')+' '+(s.p||'')+' '+(s.cat||'')+' '+(s.src||'')+' '+(s.ps||'')+' '+(s.why||'')).toLowerCase();
  s._qd=(''+(s.p||'')).replace(/\D/g,''); s._qs=s.n.toLowerCase().replace(/[^a-z0-9]/g,'')});
 const LS=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},
  SAVE=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
@@ -1387,7 +1387,7 @@ function drawSheet(){
   <div class="src">
    <div class="kv"><span>YOL</span><b>${s.yol?esc(s.yol):'No YOL purchase history found'}</b></div>
    <div class="kv"><span>MYCO</span><b>${s.myco?esc(s.myco):'No MYCO purchase history found'}</b></div>
-   ${s.mso!=null?`<div class="kv"><span>Last order</span><b>${Math.round(s.mso)} months ago</b></div>`:''}
+   ${s.xs?`<div class="kv"><span>Cross-sell</span><b>${esc(s.xs)}</b></div>`:''}${s.aka?`<div class="kv"><span>Also trades as</span><b>${esc(s.aka.join(' · '))}</b></div>`:''}${s.mso!=null?`<div class="kv"><span>Last order</span><b>${Math.round(s.mso)} months ago</b></div>`:''}
    ${follows[s.id]?`<div class="kv"><span>Follow-up</span><b>${esc(follows[s.id].due||'set')} · ${esc(follows[s.id].reason||'')}</b></div>`:''}
   </div>
   ${s.t?`<div class="src" style="box-shadow:inset 0 0 0 1px rgba(232,161,61,.25)"><b style="color:var(--ac)">Recommended next</b> · ${ACTN[s.t]}<br><span class="meta">${s.sim?`Similar to ${s.sim} verified buying customers in this category.`:'New category for us · treat as a test call.'}${s.fit?` Ranges: ${esc(s.fit)}.`:''}</span></div>`:''}
