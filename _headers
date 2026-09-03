@@ -107,3 +107,11 @@
 /app/manifest.json
   Cache-Control: no-cache
 
+/expansion-v1/sw.js
+  Cache-Control: no-cache
+
+/expansion-v1/index.html
+  Cache-Control: no-cache
+
+/expansion-v1/manifest.json
+  Cache-Control: no-cache
