@@ -350,7 +350,7 @@ const ADV=_T==='all'?[].concat(_CFG.north.ADV,_CFG.central.ADV,_CFG.south.ADV):_
 const FD=_T==='all'?[].concat(_CFG.north.FD,_CFG.central.FD,_CFG.south.FD):_CFG[_T].FD;
 const DISCST=_T==='all'?_CFG.north.DISCST:_CFG[_T].DISCST;
 const COVST=_T==='all'?_CFG.north.COVST:_CFG[_T].COVST;
-const DATAVER="28 Aug 22:07";
+const DATAVER="03 Sep 07:28";
 function _kvdb(t){return new Promise(res=>{const r=indexedDB.open('field_'+t,1);
   r.onupgradeneeded=e=>{const d=e.target.result;
    if(!d.objectStoreNames.contains('visits'))d.createObjectStore('visits',{keyPath:'id'});
