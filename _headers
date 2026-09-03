@@ -105,3 +105,6 @@
 
 /app/manifest.json
   Cache-Control: no-cache
+
+/expansion-v1/*
+  Cache-Control: no-cache
