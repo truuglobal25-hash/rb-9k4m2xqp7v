@@ -1961,6 +1961,18 @@ function vIMission(area){const m=IMIS.find(x=>x.area===area);if(!m)return vIArea
 function iGroup(g){window._ig=g;render()}
 // ---------- ask: deterministic local templates, no paid API ----------
 const IQS=[
+ // a named place: answer with that area's own mission, or say plainly it is short
+ {q:/(?:what|anything).{0,24}(?:do|work|sell).{0,12}(?:at|in)\s+([A-Za-z' .-]{3,28})|^\s*([A-Za-z' .-]{3,28})\s+mission\s*$/i,f:(m)=>{const nm=(m[1]||m[2]||'').trim().toLowerCase();
+   const a=IMIS.find(x=>x.area.toLowerCase()===nm)||IMIS.find(x=>x.area.toLowerCase().includes(nm));if(!a)return `I have no area called \u201c${esc((m[1]||m[2]||'').trim())}\u201d in the book.`;
+   const mix=Object.entries(a.mix).map(([k,v])=>`${esc(k)} ${v}`).join(', ');
+   return `${esc(a.area)}: ${a.statement}<br>${mix||'no useful stops here yet'}<br><span class="ichip" onclick="go('i:mission:'+encodeURIComponent(${JSON.stringify(a.area)}))">Open the ${esc(a.area)} mission</span>`}},
+ // a plain count for one area, answered from the book rather than guessed
+ {q:/how many\s+(customers|prospects|shops|records)\b.{0,12}(?:in|at)\s+([A-Za-z' .-]{3,28})/i,f:(m)=>{const kind=m[1].toLowerCase(),nm=m[2].trim().toLowerCase();
+   const rs=D.filter(s=>(s.town||'').toLowerCase()===nm);if(!rs.length)return `I have no records filed under \u201c${esc(m[2].trim())}\u201d.`;
+   const st=s=>{const i=iOf(s);return i?i.state:''};
+   const n=kind==='customers'?rs.filter(s=>/customer/i.test(st(s))).length:kind==='prospects'?rs.filter(s=>st(s)==='Genuine new prospect').length:rs.length;
+   const safe=rs.filter(s=>{const i=iOf(s);return i&&i.routable}).length;
+   return `${esc(m[2].trim())}: ${n} ${esc(kind)} of ${rs.length} records on the book, ${safe} of them safe to route to today.`}},
  {q:/where should (\w+) work/i,f:(m)=>{const r=m[1];const ms=iMissions().filter(x=>x.mission_ready).slice(0,3);return ms.length?`${r[0].toUpperCase()+r.slice(1)} should work <b>${esc(ms[0].area)}</b> (${ms[0].usable_safe_stops} safe stops, weakness ${ms[0].weakness}). Then ${ms.slice(1).map(x=>esc(x.area)).join(', ')||'the next area on the list'}.`:'No area has 15 safe stops in this territory yet.'}},
  {q:/buy.*yol.*not.*myco|yol but not myco/i,f:()=>{const l=iPick(i=>i.action==='Introduce MYCO',12);return `${iMine().filter(s=>{const i=iOf(s);return i&&i.action==='Introduce MYCO'}).length} customers buy YOL and have no MYCO account. Top by opportunity:<ul>${l.map(x=>`<li>${esc(x.s.n)} — ${esc(x.s.town||'')}</li>`).join('')}</ul>`}},
  {q:/buy.*myco.*not.*yol|myco but not yol/i,f:()=>{const l=iPick(i=>i.action==='Introduce YOL',12);return `${l.length} customers buy MYCO and have no YOL account:<ul>${l.map(x=>`<li>${esc(x.s.n)} — ${esc(x.s.town||'')}</li>`).join('')}</ul>`}},
@@ -1976,7 +1988,7 @@ function iAsk(q){const el=document.getElementById('iaskq');if(q!=null&&el)el.val
  for(const t of IQS){const m=v.match(t.q);if(m){box.innerHTML=t.f(m);return}}
  const hits=D.filter(s=>(s.n||'').toLowerCase().includes(v.toLowerCase())).slice(0,8);
  box.innerHTML=hits.length?`Shops matching that:<ul>${hits.map(s=>{const i=iOf(s);return `<li>${esc(s.n)} — ${esc(s.town||'')} — ${i?esc(i.action):''}</li>`}).join('')}</ul>`:IHELP}
-function vIAsk(){const ex=['Where should Susan work tomorrow?','Which customers buy YOL but not MYCO?','Show pharmacies we have never visited','Which dormant customers are worth recovering?','Which locations could send a rep to the wrong place?','Show new prospects with verified locations','Which follow-ups are overdue?'];
+function vIAsk(){const ex=['Where should Susan work tomorrow?','What should I do at Freeport?','Which customers buy YOL but not MYCO?','How many customers in Arima?','Show pharmacies we have never visited','Which dormant customers are worth recovering?','Which locations could send a rep to the wrong place?','Show new prospects with verified locations','Which follow-ups are overdue?'];
  return `<header class="top"><div class="ovl">Decision engine</div><h1>Ask</h1><p class="sub">Answered from this phone. Nothing leaves the device.</p></header><div class="wrap">
  <input class="iask" id="iaskq" placeholder="Type a question, or tap one below" oninput="iAsk()">
  <div>${ex.map(e=>`<span class="ichip" onclick="iAsk(this.textContent)">${esc(e)}</span>`).join('')}</div>
