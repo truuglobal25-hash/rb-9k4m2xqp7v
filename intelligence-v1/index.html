@@ -1970,14 +1970,16 @@ const IQS=[
  {q:/new prospects?.*verified|verified.*location/i,f:()=>{const l=iRank(iMine().filter(s=>{const i=iOf(s);return i&&i.state==='Genuine new prospect'&&i.routable}),12);return `${iMine().filter(s=>{const i=iOf(s);return i&&i.state==='Genuine new prospect'&&i.routable}).length} new prospects have a location safe to route to. Best:<ul>${l.map(x=>`<li>${esc(x.s.n)} — ${esc(x.s.town||'')}</li>`).join('')}</ul>`}},
  {q:/overdue|follow.?up/i,f:()=>{const l=iPick(i=>i.action==='Confirm decision-maker'||i.action==='Call before visiting',12);return `${l.length} shops waiting on a follow-up:<ul>${l.map(x=>`<li>${esc(x.s.n)} — ${esc(x.s.town||'')} — ${esc(x.i.todo)}</li>`).join('')}</ul>`}},
  {q:/why.*(prospect|marked)/i,f:()=>'Open any shop and the card shows its state, why it was given that action, the evidence behind it, and what could make it wrong.'}];
-function iAsk(){const v=(document.getElementById('iaskq')||{}).value||'';const box=document.getElementById('ians');if(!box)return;
+const IHELP='I can answer questions about areas, cross-sell, dormant customers, prospects, follow-ups and unsafe locations. Try one of the buttons above.';
+function iAsk(q){const el=document.getElementById('iaskq');if(q!=null&&el)el.value=q;const v=(q!=null?q:(el||{}).value||'').trim();const box=document.getElementById('ians');if(!box)return;
+ if(v.length<2){box.innerHTML=IHELP;return}
  for(const t of IQS){const m=v.match(t.q);if(m){box.innerHTML=t.f(m);return}}
  const hits=D.filter(s=>(s.n||'').toLowerCase().includes(v.toLowerCase())).slice(0,8);
- box.innerHTML=hits.length?`Shops matching that:<ul>${hits.map(s=>{const i=iOf(s);return `<li>${esc(s.n)} — ${esc(s.town||'')} — ${i?esc(i.action):''}</li>`}).join('')}</ul>`:'I can answer questions about areas, cross-sell, dormant customers, prospects, follow-ups and unsafe locations. Try one of the buttons above.'}
+ box.innerHTML=hits.length?`Shops matching that:<ul>${hits.map(s=>{const i=iOf(s);return `<li>${esc(s.n)} — ${esc(s.town||'')} — ${i?esc(i.action):''}</li>`}).join('')}</ul>`:IHELP}
 function vIAsk(){const ex=['Where should Susan work tomorrow?','Which customers buy YOL but not MYCO?','Show pharmacies we have never visited','Which dormant customers are worth recovering?','Which locations could send a rep to the wrong place?','Show new prospects with verified locations','Which follow-ups are overdue?'];
  return `<header class="top"><div class="ovl">Decision engine</div><h1>Ask</h1><p class="sub">Answered from this phone. Nothing leaves the device.</p></header><div class="wrap">
  <input class="iask" id="iaskq" placeholder="Type a question, or tap one below" oninput="iAsk()">
- <div>${ex.map(e=>`<span class="ichip" onclick="document.getElementById('iaskq').value=this.textContent;iAsk()">${esc(e)}</span>`).join('')}</div>
+ <div>${ex.map(e=>`<span class="ichip" onclick="iAsk(this.textContent)">${esc(e)}</span>`).join('')}</div>
  <div class="ians" id="ians">Tap a question to start.</div></div>`}
 // ---------- management review ----------
 function vIReview(){const q=INTEL.integrity.queue;
