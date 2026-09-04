@@ -108,3 +108,12 @@
 
 /expansion-v1/*
   Cache-Control: no-cache
+
+/location-verification-v1/sw.js
+  Cache-Control: no-cache
+
+/location-verification-v1/index.html
+  Cache-Control: no-cache
+
+/location-verification-v1/manifest.json
+  Cache-Control: no-cache
